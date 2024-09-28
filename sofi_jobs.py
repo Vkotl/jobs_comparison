@@ -38,8 +38,11 @@ def get_data_db(check_date: date) -> dict:
     res = {}
     with sqlite3.connect('sofijobs.db') as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT department, name FROM position '
-                       f'WHERE date="{check_date:%Y-%m-%d}"')
+        cursor.execute('SELECT department.name, position.name FROM position '
+                       'INNER JOIN department '
+                       'ON position.department=department.rowid '
+                       f'WHERE position.date="{check_date:%Y-%m-%d}" '
+                       f'AND department.company="SoFi";')
         for position in cursor.fetchall():
             department = position[0]
             if department in res:

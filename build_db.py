@@ -4,11 +4,14 @@ import sqlite3
 def build_sofi_db():
     with sqlite3.connect('sofijobs.db') as conn:
         cursor = conn.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS company '
+                       '(name text primary key collate nocase)')
         cursor.execute('CREATE TABLE IF NOT EXISTS department '
-                       '(name text primary key)')
+                       '(name text, company text, '
+                       'foreign key(company) references company(name))')
         cursor.execute('CREATE TABLE IF NOT EXISTS position '
-                       '(name text, date text, department text, '
-                       'foreign key(department) references department(name))')
+                       '(name text, date text, department integer, '
+                       'foreign key(department) references department(rowid))')
         print_db_schema(cursor)
 
 
@@ -46,20 +49,33 @@ def read_files_load_db(file_name):
 
     with sqlite3.connect('sofijobs.db', isolation_level=None) as conn:
         cursor = conn.cursor()
+        # Check if SoFi exists in the company table.
+        cursor.execute('SELECT name FROM company WHERE name="SoFi";')
+        if cursor.fetchone() is None:
+            # Add SoFi if it doesn't exist.
+            cursor.execute('INSERT INTO company VALUES ("SoFi");')
+            conn.commit()
+        # Clear previous history of positions.
         cursor.execute(f'DELETE FROM position WHERE date="{jobs_date}"')
         for department in jobs:
-            cursor.execute('SELECT name FROM department '
-                           f'WHERE name="{department}";')
-            if cursor.fetchone() is None:
+            get_department_rowid(cursor, department)
+            if (department_id := cursor.fetchone()) is None:
                 cursor.execute('INSERT INTO department VALUES '
-                               f'("{department}");')
+                               f'("{department}", "SoFi");')
                 conn.commit()
+                get_department_rowid(cursor, department)
+                department_id = cursor.fetchone()
             for position in jobs[department]:
                 cursor.execute(
                     'INSERT INTO position VALUES '
-                    f'("{position}", "{jobs_date}", "{department}");')
+                    f'("{position}", "{jobs_date}", {department_id[0]});')
                 conn.commit()
             cursor.execute('SELECT * FROM position')
+
+
+def get_department_rowid(cursor, department):
+    cursor.execute('SELECT rowid FROM department '
+                   f'WHERE name="{department}" AND company="SoFi";')
 
 
 def load_data():
