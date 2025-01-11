@@ -1,4 +1,5 @@
-from datetime import date
+import pytz
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
 from compare_positions import crosscheck_jobs, get_company_jobs
@@ -15,9 +16,12 @@ def get_date(*, is_old: bool) -> date:
     while not isinstance(chosen_date, date):
         chosen_date = input(input_str)
         if chosen_date == '':
-            chosen_date = date.today()
+            chosen_date = datetime.now(pytz.timezone('US/Eastern')).date()
             if is_old:
                 chosen_date += relativedelta(weekday=FR(-1))
+                if (datetime.now(pytz.timezone('US/Eastern')).date()
+                        == chosen_date):
+                    chosen_date += relativedelta(weekday=FR(-2))
         else:
             try:
                 chosen_date = chosen_date.replace('.', '-')
@@ -65,3 +69,10 @@ def compare_positions(old_date: date, new_date: date, company: str):
     print_difference(difference['new'])
     print('Removed positions:')
     print_difference(difference['removed'])
+
+
+def return_position_changes(old_date: date, new_date: date, company: str):
+    (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
+        old_date, new_date, company)
+    difference = crosscheck_jobs(new_jobs, old_jobs)
+    return difference

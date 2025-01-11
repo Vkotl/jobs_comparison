@@ -1,4 +1,5 @@
-from datetime import date
+import pytz
+from datetime import date, datetime
 
 import sqlite3
 from selenium import webdriver
@@ -44,9 +45,13 @@ def _handle_department(department: WebElement) -> tuple[str, list]:
     position_results = []
     for position in positions:
         name = position.find_element(
-            By.TAG_NAME, value='a').get_attribute('innerHTML')
+            By.TAG_NAME, value='a').get_attribute('innerHTML').strip()
+        if 'amp;' in name:
+            name = name.replace('amp;', '').strip()
         location = position.find_element(
-            By.TAG_NAME, value='div').get_attribute('innerHTML')
+            By.TAG_NAME, value='div').get_attribute('innerHTML').strip()
+        if 'amp;' in location:
+            location = location.replace('amp;', '').strip()
         position_results.append(f'{name} ({location})')
     return dept_name, position_results
 
@@ -61,7 +66,7 @@ def scrape_galileo():
         conn = sqlite3.connect('sofijobs.db')
         cursor = conn.cursor()
         _create_company_if_not_exists(conn, cursor)
-        position_date = date.today()
+        position_date = datetime.now(pytz.timezone('US/Eastern')).date()
         delete_positions_date(cursor, position_date, 'Galileo')
         for department in departments:
             department_data = _handle_department(department)
