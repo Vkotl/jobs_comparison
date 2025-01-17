@@ -1,11 +1,20 @@
+"""Helpers module for the backend."""
 import pytz
+from pathlib import Path
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
-from compare_positions import crosscheck_jobs, get_company_jobs
+from .types import Company
+from .constants import DB_NAME, BACKEND_FOLDER
 
 
 def get_date(*, is_old: bool) -> date:
+    """
+        Get the chosen date by the user.
+
+    :param is_old: Whether it is the old date.
+    :return: Returns the chosen date as a date object.
+    """
     chosen_date = ''
     if is_old:
         input_str = ('Enter date (YYYY.MM.DD) for old date or leave empty for '
@@ -31,19 +40,10 @@ def get_date(*, is_old: bool) -> date:
     return chosen_date
 
 
-def print_difference(orig_dict):
-    if len(orig_dict) != 0:
-        for department in orig_dict:
-            print(f'  {department}:')
-            for pos in orig_dict[department]:
-                print(f'    {pos}')
-    else:
-        print('There are no changes.')
-
-
-def delete_positions_date(cursor, jobs_date: date, company: str):
+def delete_positions_date(cursor, jobs_date: date, company: Company):
     """
         Delete positions for a given date in a specific company.
+
     :param cursor: Database cursor.
     :param jobs_date: The date for which the positions will be deleted.
     :param company: The company the positions belong to.
@@ -55,24 +55,10 @@ def delete_positions_date(cursor, jobs_date: date, company: str):
         '    INNER JOIN department '
         '    ON position.department=department.rowid '
         f'   WHERE position.date="{jobs_date:%Y-%m-%d}" '
-        f'   AND department.company="{company}");'
+        f'   AND department.company="{company.name}");'
     )
 
 
-def compare_positions(old_date: date, new_date: date, company: str):
-    (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
-        old_date, new_date, company)
-    difference = crosscheck_jobs(new_jobs, old_jobs)
-    print(f'{company} changes between {old_date:%Y.%m.%d} and '
-          f'{new_date:%Y.%m.%d}')
-    print('New positions:')
-    print_difference(difference['new'])
-    print('Removed positions:')
-    print_difference(difference['removed'])
-
-
-def return_position_changes(old_date: date, new_date: date, company: str):
-    (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
-        old_date, new_date, company)
-    difference = crosscheck_jobs(new_jobs, old_jobs)
-    return difference
+def build_db_path() -> Path:
+    """Build the database path."""
+    return Path(BACKEND_FOLDER, DB_NAME)

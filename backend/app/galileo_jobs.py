@@ -1,3 +1,4 @@
+"""Handle scraping and writing to database the Galileo positions."""
 import pytz
 from datetime import date, datetime
 
@@ -7,8 +8,11 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
-from helpers import print_difference, delete_positions_date
-from compare_positions import get_company_jobs, crosscheck_jobs
+from .constants import GALILEO_CAREERS_URL
+from .types import Company, Department, Position
+from .helpers import delete_positions_date, build_db_path
+from .compare_positions import (
+    get_company_jobs, crosscheck_jobs, print_difference)
 
 
 def _handle_positions_dict(file_name, pos_dict):
@@ -27,6 +31,7 @@ def _handle_positions_dict(file_name, pos_dict):
 
 
 def compare_galileo(old_date: date, new_date: date):
+    """Compare and print the positions differences between two dates."""
     (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
         old_date, new_date, 'Galileo')
     difference = crosscheck_jobs(new_jobs, old_jobs)
@@ -38,9 +43,12 @@ def compare_galileo(old_date: date, new_date: date):
     print_difference(difference['removed'])
 
 
-def _handle_department(department: WebElement) -> tuple[str, list]:
+def _handle_department(
+        department: WebElement, company: Company, pos_date: date
+        ) -> list[Position]:
     dept_name = _find_elem_class(
         department, 'DepartmentSection__Title-sc-1gi5hyp-2').text
+    dept_obj = Department(name=dept_name, company=company)
     positions = _find_elems_class(department, 'Opening__Wrapper-sc-1ghm7ee-0')
     position_results = []
     for position in positions:
@@ -52,29 +60,33 @@ def _handle_department(department: WebElement) -> tuple[str, list]:
             By.TAG_NAME, value='div').get_attribute('innerHTML').strip()
         if 'amp;' in location:
             location = location.replace('amp;', '').strip()
-        position_results.append(f'{name} ({location})')
-    return dept_name, position_results
+        position_results.append(
+            Position(name=name, location=location, department=dept_obj,
+                     date=pos_date))
+    return position_results
 
 
 def scrape_galileo():
-    url = 'https://www.galileo-ft.com/careers/'
+    """Scrape the Galileo positions from the site."""
     driver = webdriver.Firefox()
     driver.implicitly_wait(time_to_wait=20)
-    driver.get(url)
+    driver.get(GALILEO_CAREERS_URL)
     try:
-        departments = _find_elems_class(driver, 'DepartmentSection__Wrapper-sc-1gi5hyp-0')
-        conn = sqlite3.connect('sofijobs.db')
+        departments = _find_elems_class(
+            driver, 'DepartmentSection__Wrapper-sc-1gi5hyp-0')
+        conn = sqlite3.connect(build_db_path())
+        company = Company(name='Galileo')
         cursor = conn.cursor()
-        _create_company_if_not_exists(conn, cursor)
+        _create_company_if_not_exists(conn, cursor, company)
         position_date = datetime.now(pytz.timezone('US/Eastern')).date()
-        delete_positions_date(cursor, position_date, 'Galileo')
+        delete_positions_date(cursor, position_date, company)
         for department in departments:
-            department_data = _handle_department(department)
-            department_id = _create_department_if_not_exists_get(
-                cursor, department_data[0])
-            for position in department_data[1]:
-                _create_position(
-                    cursor, department_id, position_date, position)
+            position_data = _handle_department(
+                department, company, position_date)
+            department_id = _create_department_get(
+                cursor, position_data[0].department)
+            for position in position_data:
+                _create_position(cursor, department_id, position)
         conn.commit()
         conn.close()
     except TimeoutException:
@@ -90,35 +102,46 @@ def _find_elem_class(objects, class_name):
     return objects.find_element(By.CLASS_NAME, value=class_name)
 
 
-def _create_position(cursor, department_id, jobdate, position):
+def _create_position(cursor, department_id, position: Position):
     cursor.execute(
         'INSERT INTO position VALUES '
-        f'("{position}", "{jobdate:%Y-%m-%d}", {department_id});')
+        f'("{position.name} ({position.location})", "{position.date:%Y-%m-%d}"'
+        f', {department_id});')
 
 
-def _create_department_if_not_exists_get(cursor, department: str) -> int:
+def _create_department_get(cursor, department: Department) -> int:
+    """
+        Create a department if it doesn't already exist and return id.
+
+    :param cursor: Database cursor.
+    :param department: The department typing object to create in the database.
+    :return: The id of the department in the database.
+    """
+    company_name = department.company.name
     cursor.execute('SELECT rowid FROM department '
-                   f'WHERE company="Galileo" AND name="{department}";')
+                   f'WHERE company="{company_name}" '
+                   f'AND name="{department.name}";')
     if (department_id := cursor.fetchone()) is None:
         cursor.execute('INSERT INTO department VALUES '
-                       f'("{department}", "Galileo");')
+                       f'("{department.name}", "{company_name}");')
         cursor.execute('SELECT rowid FROM department '
-                       f'WHERE company="Galileo" AND name="{department}";')
+                       f'WHERE company="{company_name}" '
+                       f'AND name="{department.name}";')
         department_id = cursor.fetchone()
     return department_id[0]
 
 
-def _create_company_if_not_exists(conn, cursor):
-    cursor.execute('SELECT name FROM company WHERE name="Galileo";')
+def _create_company_if_not_exists(conn, cursor, company: Company):
+    cursor.execute(f'SELECT name FROM company WHERE name="{company.name}";')
     if cursor.fetchone() is None:
-        cursor.execute('INSERT INTO company VALUES ("Galileo");')
+        cursor.execute(f'INSERT INTO company VALUES ("{company.name}");')
         conn.commit()
 
 
-def main():
+def _main():
     scrape_galileo()
     # compare_galileo()
 
 
 if __name__ == '__main__':
-    main()
+    _main()

@@ -1,3 +1,4 @@
+"""Handle scraping and writing to database the SoFi positions."""
 import pytz
 from datetime import date, datetime
 
@@ -7,11 +8,14 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
-from helpers import print_difference, delete_positions_date
-from compare_positions import crosscheck_jobs, get_company_jobs
+from .constants import SOFI_CAREERS_URL
+from .helpers import delete_positions_date, build_db_path
+from .compare_positions import (
+    crosscheck_jobs, get_company_jobs, print_difference)
 
 
 def sofi_jobs_check(old_date: date, new_date: date):
+    """Compare and print the positions differences between two dates."""
     (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
         old_date, new_date, 'SoFi')
     difference = crosscheck_jobs(new_jobs, old_jobs)
@@ -23,7 +27,7 @@ def sofi_jobs_check(old_date: date, new_date: date):
 
 
 def scrape_sofi():
-    url = 'https://www.sofi.com/careers/'
+    """Scrape the Galileo positions from the site."""
     options = webdriver.ChromeOptions()
     options.add_argument('user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; '
                          'x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -34,10 +38,10 @@ def scrape_sofi():
 
     driver = webdriver.Chrome(options)
     driver.implicitly_wait(time_to_wait=40)
-    driver.get(url)
+    driver.get(SOFI_CAREERS_URL)
     try:
         departments = _find_elems_class(driver, 'dept')
-        conn = sqlite3.connect('sofijobs.db')
+        conn = sqlite3.connect(build_db_path())
         cursor = conn.cursor()
         _create_company_if_not_exists(conn, cursor)
         position_date = datetime.now(pytz.timezone('US/Eastern')).date()
@@ -104,9 +108,9 @@ def _find_elem_class(objects, class_name):
     return objects.find_element(By.CLASS_NAME, value=class_name)
 
 
-def main():
+def _main():
     scrape_sofi()
 
 
 if __name__ == '__main__':
-    main()
+    _main()

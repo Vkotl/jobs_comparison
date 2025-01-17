@@ -1,13 +1,16 @@
+"""Module to load positions from txt files to the database."""
+
 import sqlite3
 from datetime import date
 
-from helpers import delete_positions_date
+from .helpers import delete_positions_date, build_db_path
 
 
 def get_department_rowid_or_create(
         conn, cursor, department: str, company: str) -> int:
     """
         Get the department's rowid, and if needed create it beforehand too.
+
     :param conn: Database connection.
     :param cursor: Database cursor.
     :param department: The department name.
@@ -27,6 +30,7 @@ def get_department_rowid_or_create(
 def query_department_rowid(cursor, department: str, company: str):
     """
         Execute a query to get the rowid of the department from company.
+
     :param cursor: Database cursor.
     :param department: The required department.
     :param company: The company the department belongs to.
@@ -38,6 +42,7 @@ def query_department_rowid(cursor, department: str, company: str):
 def create_company_if_not_exist(conn, cursor, company: str):
     """
         Check whether the company exists in the database, if not create it.
+
     :param conn: Database connection.
     :param cursor: Database cursor.
     :param company: Company name.
@@ -53,11 +58,12 @@ def create_company_if_not_exist(conn, cursor, company: str):
 def load_to_db(jobs_date: date, jobs: dict, company: str):
     """
         Load the positions dict into the database.
+
     :param jobs_date: The date the jobs dict was scraped.
     :param jobs: Dict with positions sorted into departments.
     :param company: The name of the company for the positions.
     """
-    with sqlite3.connect('sofijobs.db', isolation_level=None) as conn:
+    with sqlite3.connect(build_db_path(), isolation_level=None) as conn:
         cursor = conn.cursor()
         create_company_if_not_exist(conn, cursor, company)
         delete_positions_date(cursor, jobs_date, company)
@@ -74,6 +80,7 @@ def load_to_db(jobs_date: date, jobs: dict, company: str):
 def clean_sofi_jobs(jobs: list) -> dict:
     """
         Clean the position listing from the SoFi file.
+
     :param jobs: List of all the lines in the SoFi position file.
     :return: Dict with positions sorted into departments.
     """
@@ -96,6 +103,7 @@ def clean_sofi_jobs(jobs: list) -> dict:
 def clean_galileo_jobs(jobs: list) -> dict:
     """
         Clean the position listing from the Galileo file.
+
     :param jobs: List of all the lines in the Galileo position file.
     :return: Dict with positions sorted into departments.
     """
@@ -115,6 +123,7 @@ def clean_galileo_jobs(jobs: list) -> dict:
 def read_files_db(file_name: str, company: str):
     """
         Read from Galileo positions files and load to the database.
+
     :param file_name: The name of the file.
     :param company: The name of the company.
     """
@@ -128,12 +137,12 @@ def read_files_db(file_name: str, company: str):
     load_to_db(jobs_date, jobs, company)
 
 
-def load_data():
+def _load_data():
     # read_files_db('prev1.txt', 'SoFi')
     # read_files_db('prev.txt', 'SoFi')
-    read_files_db('new.txt', 'SoFi')
+    read_files_db('../../new.txt', 'SoFi')
     # read_files_db('galileo_new.txt', 'Galileo')
 
 
 if __name__ == '__main__':
-    load_data()
+    _load_data()
