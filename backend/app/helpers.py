@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
-from .types import Company
+from .proj_typing import Company
 from .constants import DB_NAME, BACKEND_FOLDER
 
 

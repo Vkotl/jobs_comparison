@@ -9,7 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
 from .constants import GALILEO_CAREERS_URL
-from .types import Company, Department, Position
+from .proj_typing import Company, Department, Position
 from .helpers import delete_positions_date, build_db_path
 from .compare_positions import (
     get_company_jobs, crosscheck_jobs, print_difference)

@@ -62,13 +62,12 @@ def _handle_comparison(from_lst, to_lst, diff_dict):
         if department not in to_lst:
             diff_dict[department] = from_lst[department]
         else:
-            if len(from_lst[department]) > 0:
-                diff_dict[department] = []
+            diff_dict[department] = []
             for pos in from_lst[department]:
                 if pos not in to_lst[department]:
                     diff_dict[department].append(pos)
-            # if len(diff_dict[department]) == 0:
-            #     del diff_dict[department]
+            if len(diff_dict[department]) == 0:
+                del diff_dict[department]
 
 
 def get_company_jobs(old_date: date, new_date: date, company: str

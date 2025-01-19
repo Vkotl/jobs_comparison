@@ -3,7 +3,7 @@
 import sqlite3
 from datetime import date
 
-from .helpers import delete_positions_date, build_db_path
+from helpers import delete_positions_date, build_db_path
 
 
 def get_department_rowid_or_create(

@@ -1,44 +1,55 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import axios from 'axios';
-import './App.css'
+import { useState, useEffect } from "react";
+import axios from "axios";
+import "./App.css";
+import * as React from "react";
+import {ChangeDates} from "./ChangeDate.tsx";
+import {ChangesDataComponent} from "./ChangesDataComponent.tsx";
+import {Container, Button} from "react-bootstrap";
 
-function App() {
-    const [count, setCount] = useState(0);
+const HandleDateClick = (event: React.MouseEvent<HTMLSpanElement>) => {
+    const span = event.target as HTMLSpanElement;
+    if (span.classList.contains("chosen")) {
+        span.classList.remove("chosen");
+    }
+    else {
+        const chosen_dates = document.getElementsByClassName("chosen");
+        if (chosen_dates.length >= 2) {
+            chosen_dates[0].classList.remove("chosen");
+        }
+        span.classList.add("chosen");
+    }
+}
+
+const App: React.FC = () => {
     const [array, setArray] = useState([]);
-
+    const [dates, setDates] = React.useState(true);
     const fetchAPI = async () => {
       const response = await axios.get("http://localhost:3000/changes");
-      setArray(response.data.last_10)
+      setArray(response.data.last_10);
     };
     useEffect(() => {
         fetchAPI();
     }, []);
+    const HandleChangesButton = () => {
+        setDates(false)
+    }
   return (
+    /* This wraps the HTML in a single element without giving a specific one,
+    *  making it turn into the parent element of <div id="root"> */
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        {array.map((item, i) => (
-            <div key={i}>
-                <span>{item}</span>
-            </div>
-        ))}
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+        {dates ? (
+            <Container>
+                {array.map((item, i) => (
+                    <div key={i}>
+                        <ChangeDates date={item} onClick={HandleDateClick} />
+                    </div>
+                ))}
+                <Button onClick={HandleChangesButton} >Request Changes</Button>
+            </Container>
+        ) : (
+            <ChangesDataComponent />
+        )}
+
     </>
   )
 }

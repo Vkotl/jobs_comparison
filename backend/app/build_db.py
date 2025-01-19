@@ -1,7 +1,7 @@
 """Module for creating and also printing the schema of the database."""
 import sqlite3
 
-from .helpers import build_db_path
+from helpers import build_db_path
 
 
 def build_sofi_db():

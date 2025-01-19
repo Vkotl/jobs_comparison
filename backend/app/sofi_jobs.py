@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
+from .proj_typing import Company
 from .constants import SOFI_CAREERS_URL
 from .helpers import delete_positions_date, build_db_path
 from .compare_positions import (
@@ -42,10 +43,11 @@ def scrape_sofi():
     try:
         departments = _find_elems_class(driver, 'dept')
         conn = sqlite3.connect(build_db_path())
+        company = Company(name='SoFi')
         cursor = conn.cursor()
-        _create_company_if_not_exists(conn, cursor)
+        _create_company_if_not_exists(conn, cursor, company)
         position_date = datetime.now(pytz.timezone('US/Eastern')).date()
-        delete_positions_date(cursor, position_date, 'SoFi')
+        delete_positions_date(cursor, position_date, company)
         for department in departments:
             department_data = _handle_department(department)
             department_id = _create_department_if_not_exists_get(
@@ -93,10 +95,10 @@ def _handle_department(department: WebElement) -> tuple[str, list]:
     return dept_name, position_results
 
 
-def _create_company_if_not_exists(conn, cursor):
-    cursor.execute('SELECT name FROM company WHERE name="SoFi";')
+def _create_company_if_not_exists(conn, cursor, company: Company):
+    cursor.execute(f'SELECT name FROM company WHERE name="{company.name}";')
     if cursor.fetchone() is None:
-        cursor.execute('INSERT INTO company VALUES ("SoFi");')
+        cursor.execute(f'INSERT INTO company VALUES ("{company.name}");')
         conn.commit()
 
 
