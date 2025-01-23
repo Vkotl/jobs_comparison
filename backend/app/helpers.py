@@ -4,8 +4,8 @@ from pathlib import Path
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
+from .constants import DB_NAME
 from .proj_typing import Company
-from .constants import DB_NAME, BACKEND_FOLDER
 
 
 def get_date(*, is_old: bool) -> date:
@@ -28,8 +28,8 @@ def get_date(*, is_old: bool) -> date:
             chosen_date = datetime.now(pytz.timezone('US/Eastern')).date()
             if is_old:
                 chosen_date += relativedelta(weekday=FR(-1))
-                if (datetime.now(pytz.timezone('US/Eastern')).date()
-                        == chosen_date):
+                if (datetime.now(pytz.timezone('US/Eastern')
+                                 ).date() == chosen_date):
                     chosen_date += relativedelta(weekday=FR(-2))
         else:
             try:
@@ -61,4 +61,4 @@ def delete_positions_date(cursor, jobs_date: date, company: Company):
 
 def build_db_path() -> Path:
     """Build the database path."""
-    return Path(BACKEND_FOLDER, DB_NAME)
+    return Path(__file__).parents[1].absolute() / DB_NAME

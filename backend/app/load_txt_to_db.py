@@ -91,7 +91,7 @@ def clean_sofi_jobs(jobs: list) -> dict:
         line = jobs.pop(0)
         lower_line = line.lower()
         if lower_line.endswith('openings') or lower_line.endswith('opening'):
-            department = line[:line.rindex(' ', 0, (1+openings_len)*(-1))]
+            department = line[:line.rindex(' ', 0, (1 + openings_len) * (-1))]
             res[department] = []
         elif line != 'Apply Now':
             res[department].append(line)

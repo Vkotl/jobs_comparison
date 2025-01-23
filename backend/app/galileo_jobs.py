@@ -45,7 +45,7 @@ def compare_galileo(old_date: date, new_date: date):
 
 def _handle_department(
         department: WebElement, company: Company, pos_date: date
-        ) -> list[Position]:
+) -> list[Position]:
     dept_name = _find_elem_class(
         department, 'DepartmentSection__Title-sc-1gi5hyp-2').text
     dept_obj = Department(name=dept_name, company=company)

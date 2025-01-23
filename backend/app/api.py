@@ -15,16 +15,16 @@ from .compare_positions import get_position_changes
 app = FastAPI()
 
 origins = [
-    "http://localhost:8000",
-    "localhost:8000"
+    'http://localhost:8000',
+    'localhost:8000'
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=['*'],
+    allow_headers=['*']
 )
 
 
@@ -46,7 +46,7 @@ def read_root():
 def recent_dates():
     """Display the last 10 dates in the database."""
     print('I am here!')
-    return {"last_10": get_last_10_dates()}
+    return {'last_10': get_last_10_dates()}
 
 
 @app.get('/changes/{old_date}-{new_date}')
@@ -71,5 +71,5 @@ def grab_data():
         scrape_galileo()
     except Exception as e:
         print(e)
-        return {'error': "Scraping failed."}
+        return {'error': 'Scraping failed.'}
     return {'success': 'Scraping completed.'}
