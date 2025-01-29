@@ -1,6 +1,6 @@
 export interface Company {
-    new : {[key: string]: string[]};
-    removed: {[key: string]: string[]};
+    new : {[key: string]: [string, string]};
+    removed: {[key: string]: [string, string]};
 }
 
 export interface ChangesJsonData {

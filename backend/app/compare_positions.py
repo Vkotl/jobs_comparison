@@ -1,6 +1,8 @@
 """Comparison and data retrival from the database."""
+import pytz
 import sqlite3
-from datetime import date
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta, FR
 
 from .helpers import build_db_path
 
@@ -16,11 +18,12 @@ def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
     res = {}
     with sqlite3.connect(build_db_path()) as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT department.name, position.name FROM position '
-                       'INNER JOIN department '
-                       'ON position.department=department.rowid '
-                       f'WHERE position.date="{check_date:%Y-%m-%d}" '
-                       f'AND department.company="{company}";')
+        cursor.execute(
+            'SELECT department.name, position.name, position.url '
+            'FROM position '
+            'INNER JOIN department ON position.department=department.rowid '
+            f'WHERE position.date="{check_date:%Y-%m-%d}" '
+            f'AND department.company="{company}";')
         positions = cursor.fetchall()
         if len(positions) == 0:
             cursor.execute(
@@ -34,10 +37,12 @@ def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
             return get_data_db(recent_date, company)
         for position in positions:
             department = position[0]
+            pos_data = (position[1],
+                        position[2] if position[2] is not None else '')
             if department in res:
-                res[department].append(position[1])
+                res[department].append(pos_data)
             else:
-                res[department] = [position[1]]
+                res[department] = [pos_data]
     return res, check_date
 
 
@@ -64,7 +69,10 @@ def _handle_comparison(from_lst, to_lst, diff_dict):
         else:
             diff_dict[department] = []
             for pos in from_lst[department]:
-                if pos not in to_lst[department]:
+                try:
+                    next(filter(lambda item: pos[0] == item[0],
+                                to_lst[department]))
+                except StopIteration:
                     diff_dict[department].append(pos)
             if len(diff_dict[department]) == 0:
                 del diff_dict[department]
@@ -111,3 +119,13 @@ def get_position_changes(old_date: date, new_date: date, company: str) -> dict:
         old_date, new_date, company)
     difference = crosscheck_jobs(new_jobs, old_jobs)
     return difference
+
+
+def handle_changes_response(old_date: date, new_date:date) -> dict:
+    if datetime.now(pytz.timezone('US/Eastern')).date() == old_date:
+        old_date += relativedelta(weekday=FR(-2))
+    sofi = get_position_changes(old_date, new_date, 'SoFi')
+    galileo = get_position_changes(old_date, new_date, 'Galileo')
+    return {'new_date': new_date.strftime('%Y-%m-%d'),
+            'previous_date': old_date.strftime('%Y-%m-%d'), 'sofi': sofi,
+            'galileo': galileo}

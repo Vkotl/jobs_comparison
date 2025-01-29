@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .sofi_jobs import scrape_sofi
 from .galileo_jobs import scrape_galileo
 from .total_jobs import get_last_10_dates
-from .compare_positions import get_position_changes
+from .compare_positions import get_position_changes, handle_changes_response
 
 app = FastAPI()
 
@@ -28,18 +28,13 @@ app.add_middleware(
 )
 
 
-@app.get('/')
+@app.get('/changes/week')
 def read_root():
     """Handle root URL where it returns last week changes."""
     tz_title = 'US/Eastern'
     chosen_date = datetime.now(pytz.timezone(tz_title)).date()
     old_date = chosen_date + relativedelta(weekday=FR(-1))
-    if datetime.now(pytz.timezone(tz_title)).date() == old_date:
-        old_date += relativedelta(weekday=FR(-2))
-    sofi = get_position_changes(old_date, chosen_date, 'SoFi')
-    galileo = get_position_changes(old_date, chosen_date, 'Galileo')
-    return {'new_date': chosen_date, 'last_friday': old_date, 'sofi': sofi,
-            'galileo': galileo}
+    return handle_changes_response(old_date, chosen_date)
 
 
 @app.get('/changes')
@@ -54,13 +49,15 @@ def read_changes(old_date: str, new_date: str):
     """Display the changes between the old date and the new date."""
     old_date = datetime.strptime(old_date, '%Y%m%d')
     new_date = datetime.strptime(new_date, '%Y%m%d')
-    if datetime.now(pytz.timezone('US/Eastern')).date() == old_date:
-        old_date += relativedelta(weekday=FR(-2))
-    sofi = get_position_changes(old_date, new_date, 'SoFi')
-    galileo = get_position_changes(old_date, new_date, 'Galileo')
-    return {'new_date': new_date.strftime('%Y-%m-%d'),
-            'previous_date': old_date.strftime('%Y-%m-%d'), 'sofi': sofi,
-            'galileo': galileo}
+    return handle_changes_response(old_date, new_date)
+
+
+@app.get('/changes/{new_date}')
+def read_changes(new_date: str):
+    """Display the changes the new date and previous Friday."""
+    new_date = datetime.strptime(new_date, '%Y%m%d')
+    old_date = new_date + relativedelta(weekday=FR(-1))
+    return handle_changes_response(old_date, new_date)
 
 
 @app.get('/grab_data')

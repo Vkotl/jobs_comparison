@@ -9,10 +9,12 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
 from .proj_typing import Company
-from .constants import SOFI_CAREERS_URL
-from .helpers import delete_positions_date, build_db_path
+from .helpers import delete_positions_date, build_db_path, strip_amp
 from .compare_positions import (
     crosscheck_jobs, get_company_jobs, print_difference)
+from .constants import (
+    SOFI_CAREERS_URL, SOFI_DEPARTMENT_TITLE_CLASS, SOFI_POSITION_WRAPPER_CLASS,
+    SOFI_POSITION_TITLE_CLASS, SOFI_DEPARTMENT_WRAPPER_CLASS)
 
 
 def sofi_jobs_check(old_date: date, new_date: date):
@@ -41,7 +43,7 @@ def scrape_sofi():
     driver.implicitly_wait(time_to_wait=40)
     driver.get(SOFI_CAREERS_URL)
     try:
-        departments = _find_elems_class(driver, 'dept')
+        departments = _find_elems_class(driver, SOFI_DEPARTMENT_WRAPPER_CLASS)
         conn = sqlite3.connect(build_db_path())
         company = Company(name='SoFi')
         cursor = conn.cursor()
@@ -65,7 +67,8 @@ def scrape_sofi():
 def _create_position(cursor, department_id, jobdate, position):
     cursor.execute(
         'INSERT INTO position VALUES '
-        f'("{position}", "{jobdate:%Y-%m-%d}", {department_id});')
+        f'("{position[0]}", "{jobdate:%Y-%m-%d}", {department_id}, '
+        f'"{position[1]}");')
 
 
 def _create_department_if_not_exists_get(cursor, department: str) -> int:
@@ -80,18 +83,23 @@ def _create_department_if_not_exists_get(cursor, department: str) -> int:
     return department_id[0]
 
 
-def _handle_department(department: WebElement) -> tuple[str, list]:
-    dept_name = _find_elem_class(department, 'dept-title').text.strip()
-    positions = _find_elems_class(department, 'job')
+def _handle_department(
+        department: WebElement) -> tuple[str, list[tuple[str, str]]]:
+    """Get data from the department element, like name and positions."""
+    dept_name = strip_amp(_find_elem_class(
+        department, SOFI_DEPARTMENT_TITLE_CLASS).text)
+    if dept_name.startswith('CC'):
+        dept_name = dept_name[dept_name.index(' ') + 1:]
+    positions = _find_elems_class(department, SOFI_POSITION_WRAPPER_CLASS)
     position_results = []
     for position in positions:
-        name = position.find_element(
-            By.CLASS_NAME, value='job-title').get_attribute('innerHTML')
-        if 'amp;' in name:
-            name = name.replace('amp;', '').strip()
+        name = strip_amp(position.find_element(
+            By.CLASS_NAME, value=SOFI_POSITION_TITLE_CLASS
+        ).get_attribute('innerHTML'))
+        url = position.get_attribute('data-link')
         # location = position.find_element(
         #     By.CLASS_NAME, value='job-location').get_attribute('innerHTML')
-        position_results.append(name)
+        position_results.append((name, url))
     return dept_name, position_results
 
 

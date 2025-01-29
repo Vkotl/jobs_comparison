@@ -14,7 +14,7 @@ def build_sofi_db():
                        '(name text, company text, '
                        'foreign key(company) references company(name))')
         cursor.execute('CREATE TABLE IF NOT EXISTS position '
-                       '(name text, date text, department integer, '
+                       '(name text, date text, department integer, url text,'
                        'foreign key(department) references department(rowid))')
         # print_db_schema(cursor)
 

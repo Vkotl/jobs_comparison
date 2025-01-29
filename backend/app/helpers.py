@@ -62,3 +62,10 @@ def delete_positions_date(cursor, jobs_date: date, company: Company):
 def build_db_path() -> Path:
     """Build the database path."""
     return Path(__file__).parents[1].absolute() / DB_NAME
+
+
+def strip_amp(text: str) -> str:
+    """Remove amp; from texts and then use strip()."""
+    if 'amp;' in text:
+        text = text.replace('amp;', '')
+    return text.strip()

@@ -38,7 +38,7 @@ const App: React.FC = () => {
     *  making it turn into the parent element of <div id="root"> */
     <>
         {dates ? (
-            <Container>
+            <Container className="change-dates">
                 {array.map((item, i) => (
                     <div key={i}>
                         <ChangeDates date={item} onClick={HandleDateClick} />

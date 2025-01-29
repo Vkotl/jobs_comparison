@@ -8,11 +8,13 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
-from .constants import GALILEO_CAREERS_URL
 from .proj_typing import Company, Department, Position
-from .helpers import delete_positions_date, build_db_path
+from .helpers import delete_positions_date, build_db_path, strip_amp
 from .compare_positions import (
     get_company_jobs, crosscheck_jobs, print_difference)
+from .constants import (
+    GALILEO_CAREERS_URL, GALILEO_DEPARTMENT_WRAPPER_CLASS,
+    GALILEO_DEPARTMENT_TITLE_CLASS, GALILEO_POSITION_WRAPPER_CLASS)
 
 
 def _handle_positions_dict(file_name, pos_dict):
@@ -47,22 +49,19 @@ def _handle_department(
         department: WebElement, company: Company, pos_date: date
 ) -> list[Position]:
     dept_name = _find_elem_class(
-        department, 'DepartmentSection__Title-sc-1gi5hyp-2').text
+        department, GALILEO_DEPARTMENT_TITLE_CLASS).text
     dept_obj = Department(name=dept_name, company=company)
-    positions = _find_elems_class(department, 'Opening__Wrapper-sc-1ghm7ee-0')
+    positions = _find_elems_class(department, GALILEO_POSITION_WRAPPER_CLASS)
     position_results = []
     for position in positions:
-        name = position.find_element(
-            By.TAG_NAME, value='a').get_attribute('innerHTML').strip()
-        if 'amp;' in name:
-            name = name.replace('amp;', '').strip()
-        location = position.find_element(
-            By.TAG_NAME, value='div').get_attribute('innerHTML').strip()
-        if 'amp;' in location:
-            location = location.replace('amp;', '').strip()
+        url_element = position.find_element(By.TAG_NAME, value='a')
+        url = url_element.get_attribute('href')
+        name = strip_amp(url_element.get_attribute('innerHTML'))
+        location = strip_amp(position.find_element(
+            By.TAG_NAME, value='div').get_attribute('innerHTML'))
         position_results.append(
             Position(name=name, location=location, department=dept_obj,
-                     date=pos_date))
+                     date=pos_date, url=url))
     return position_results
 
 
@@ -73,22 +72,21 @@ def scrape_galileo():
     driver.get(GALILEO_CAREERS_URL)
     try:
         departments = _find_elems_class(
-            driver, 'DepartmentSection__Wrapper-sc-1gi5hyp-0')
-        conn = sqlite3.connect(build_db_path())
-        company = Company(name='Galileo')
-        cursor = conn.cursor()
-        _create_company_if_not_exists(conn, cursor, company)
-        position_date = datetime.now(pytz.timezone('US/Eastern')).date()
-        delete_positions_date(cursor, position_date, company)
-        for department in departments:
-            position_data = _handle_department(
-                department, company, position_date)
-            department_id = _create_department_get(
-                cursor, position_data[0].department)
-            for position in position_data:
-                _create_position(cursor, department_id, position)
-        conn.commit()
-        conn.close()
+            driver, GALILEO_DEPARTMENT_WRAPPER_CLASS)
+        with sqlite3.connect(build_db_path()) as conn:
+            company = Company(name='Galileo')
+            cursor = conn.cursor()
+            _create_company_if_not_exists(conn, cursor, company)
+            position_date = datetime.now(pytz.timezone('US/Eastern')).date()
+            delete_positions_date(cursor, position_date, company)
+            for department in departments:
+                position_data = _handle_department(
+                    department, company, position_date)
+                department_id = _create_department_get(
+                    cursor, position_data[0].department)
+                for position in position_data:
+                    _create_position(cursor, department_id, position)
+            conn.commit()
     except TimeoutException:
         print('Failed')
     driver.close()
@@ -106,7 +104,7 @@ def _create_position(cursor, department_id, position: Position):
     cursor.execute(
         'INSERT INTO position VALUES '
         f'("{position.name} ({position.location})", "{position.date:%Y-%m-%d}"'
-        f', {department_id});')
+        f', {department_id}, "{position.url}");')
 
 
 def _create_department_get(cursor, department: Department) -> int:

@@ -18,7 +18,8 @@ export const ChangesGroup: React.FC<Props> = ({data, company, pos_type})=> {
                     Object.keys(data[company][pos_type]).map((department: string) => (
                         <DepartmentData department={department}
                                         departments={data[company][pos_type]}
-                                        key={department + " " + pos_type}/>
+                                        link={pos_type !== "removed"}
+                                        key={department.concat(" ", pos_type)}/>
                     ))
                 }
             </div>
