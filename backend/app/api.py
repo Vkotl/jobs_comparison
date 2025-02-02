@@ -10,7 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .sofi_jobs import scrape_sofi
 from .galileo_jobs import scrape_galileo
 from .total_jobs import get_last_10_dates
-from .compare_positions import get_position_changes, handle_changes_response
+from .decorators import date_verification
+from .compare_positions import handle_changes_response
 
 app = FastAPI()
 
@@ -29,7 +30,8 @@ app.add_middleware(
 
 
 @app.get('/changes/week')
-def read_root():
+@date_verification
+def changes_week():
     """Handle root URL where it returns last week changes."""
     tz_title = 'US/Eastern'
     chosen_date = datetime.now(pytz.timezone(tz_title)).date()
@@ -45,7 +47,8 @@ def recent_dates():
 
 
 @app.get('/changes/{old_date}-{new_date}')
-def read_changes(old_date: str, new_date: str):
+@date_verification
+def changes_two_dates(old_date: str, new_date: str):
     """Display the changes between the old date and the new date."""
     old_date = datetime.strptime(old_date, '%Y%m%d')
     new_date = datetime.strptime(new_date, '%Y%m%d')
@@ -53,7 +56,8 @@ def read_changes(old_date: str, new_date: str):
 
 
 @app.get('/changes/{new_date}')
-def read_changes(new_date: str):
+@date_verification
+def changes_single_date(new_date: str):
     """Display the changes the new date and previous Friday."""
     new_date = datetime.strptime(new_date, '%Y%m%d')
     old_date = new_date + relativedelta(weekday=FR(-1))

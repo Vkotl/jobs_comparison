@@ -22,7 +22,7 @@ export const ChangesDataComponent: React.FC = ()=> {
     else if (chosen.length == 2) {
         const first: string = chosen[0].textContent || "First date had a problem.",
             second: string = chosen[1].textContent || "Second date had a problem.";
-        decision = first.replace(/-/g, "").concat("-", second.replace(/-/g, ""));
+        decision = `${first.replace(/-/g, "")}-${second.replace(/-/g, "")}`;
     }
     if (decision !== undefined) {
         axios.get("http://localhost:3000/changes/"+decision

@@ -1,6 +1,0 @@
-[flake8]
-exclude =
-    .git, __pycache__, *.txt, .venv, frontend
-per-file-ignores = */__init__.py: D104
-ignore = D105
-inline-quotes = single

@@ -121,7 +121,8 @@ def get_position_changes(old_date: date, new_date: date, company: str) -> dict:
     return difference
 
 
-def handle_changes_response(old_date: date, new_date:date) -> dict:
+def handle_changes_response(old_date: date, new_date: date) -> dict:
+    """Handle the response with positions changes."""
     if datetime.now(pytz.timezone('US/Eastern')).date() == old_date:
         old_date += relativedelta(weekday=FR(-2))
     sofi = get_position_changes(old_date, new_date, 'SoFi')
