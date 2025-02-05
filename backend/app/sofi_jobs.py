@@ -64,21 +64,22 @@ def scrape_sofi():
     driver.close()
 
 
-def _create_position(cursor, department_id, jobdate, position):
-    cursor.execute(
-        'INSERT INTO position VALUES '
-        f'("{position[0]}", "{jobdate:%Y-%m-%d}", {department_id}, '
-        f'"{position[1]}");')
+def _create_position(cursor, department_id, jobdate: date, position):
+    data = (position[0], jobdate.strftime('%Y-%m-%d'), department_id,
+            position[1])
+    cursor.execute('INSERT INTO position VALUES (?, ?, ?, ?);', data)
 
 
 def _create_department_if_not_exists_get(cursor, department: str) -> int:
+    db_data = (department,)
     cursor.execute('SELECT rowid FROM department '
-                   f'WHERE company="SoFi" AND name="{department}";')
+                   'WHERE company="SoFi" AND name=?;', db_data) # nosec B608
     if (department_id := cursor.fetchone()) is None:
-        cursor.execute('INSERT INTO department VALUES '
-                       f'("{department}", "SoFi");')
-        cursor.execute('SELECT rowid FROM department '
-                       f'WHERE company="SoFi" AND name="{department}";')
+        cursor.execute('INSERT INTO department VALUES (?, "SoFi");',
+                       db_data) # nosec B608
+        cursor.execute(
+            'SELECT rowid FROM department WHERE company="SoFi" AND name=?;',
+            db_data) # nosec B608
         department_id = cursor.fetchone()
     return department_id[0]
 
@@ -104,9 +105,12 @@ def _handle_department(
 
 
 def _create_company_if_not_exists(conn, cursor, company: Company):
-    cursor.execute(f'SELECT name FROM company WHERE name="{company.name}";')
+    db_data = (company.name,)
+    cursor.execute(
+        'SELECT name FROM company WHERE name=?;', db_data) # nosec B608
     if cursor.fetchone() is None:
-        cursor.execute(f'INSERT INTO company VALUES ("{company.name}");')
+        cursor.execute(
+            'INSERT INTO company VALUES (?);', db_data) # nosec B608
         conn.commit()
 
 

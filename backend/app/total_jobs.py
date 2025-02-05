@@ -37,8 +37,7 @@ def get_last_10_dates():
 
 
 def compare_positions(old_date: date, new_date: date, company: str):
-    """
-        Compare and print position differences for a given date and a company.
+    """Compare and print position differences for a given date and a company.
 
     :param old_date: The old date to use for the old positions.
     :param new_date: The new date to use for the new positions.

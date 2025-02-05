@@ -25,7 +25,7 @@ def print_db_schema(cursor):
     tables = cursor.fetchall()
     for table in tables:
         print(table[0])
-        cursor.execute(f'SELECT * FROM {table[0]}')
+        cursor.execute(f'SELECT * FROM {table[0]}') # nosec B608
         print(cursor.description)
 
 

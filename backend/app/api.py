@@ -64,7 +64,7 @@ def changes_single_date(new_date: str):
     return handle_changes_response(old_date, new_date)
 
 
-@app.get('/grab_data')
+@app.post('/grab_data')
 def grab_data():
     """Scrape positions data from the sites and save in the database."""
     try:

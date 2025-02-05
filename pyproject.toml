@@ -1,0 +1,26 @@
+[project]
+name = "sofi_jobs_comparison"
+version = "0.1.0"
+description = "Scrapes positions from SoFi and Galileo sites and compares to the past."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Vadim Kotlarov", email = "vadimkotl88@gmail.com"}]
+maintainers = [{ name = "Vadim Kotlarov", email = "vadimkotl88@gmail.com"}]
+
+[tool.bandit]
+exclude_dirs = [".venv", "frontend"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 30
+
+[tool.ruff.lint]
+# D for flake8-docstring, Q for flake8-quotes, N for pep8-naming.
+select = ["E4", "E7", "E9", "F", "D", "Q", "N"]
+# Ignoring D105 magic method doc, D203 blank line before class doc,
+# D213 function doc starting from second line.
+ignore = ["D105", "D203", "D213"]
+fixable = []
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"

@@ -9,8 +9,7 @@ from .proj_typing import Company
 
 
 def get_date(*, is_old: bool) -> date:
-    """
-        Get the chosen date by the user.
+    """Get the chosen date by the user.
 
     :param is_old: Whether it is the old date.
     :return: Returns the chosen date as a date object.
@@ -41,21 +40,20 @@ def get_date(*, is_old: bool) -> date:
 
 
 def delete_positions_date(cursor, jobs_date: date, company: Company):
-    """
-        Delete positions for a given date in a specific company.
+    """Delete positions for a given date in a specific company.
 
     :param cursor: Database cursor.
     :param jobs_date: The date for which the positions will be deleted.
     :param company: The company the positions belong to.
     """
+    db_data = (jobs_date.strftime('%Y-%m-%d'), company.name)
     cursor.execute(
         'DELETE FROM position '
         'WHERE rowid in ('
         '    SELECT position.rowid as rowid from position '
         '    INNER JOIN department '
         '    ON position.department=department.rowid '
-        f'   WHERE position.date="{jobs_date:%Y-%m-%d}" '
-        f'   AND department.company="{company.name}");'
+        '    WHERE position.date=? AND department.company=?);', db_data
     )
 
 

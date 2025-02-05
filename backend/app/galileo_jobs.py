@@ -101,38 +101,38 @@ def _find_elem_class(objects, class_name):
 
 
 def _create_position(cursor, department_id, position: Position):
+    db_data = (f'{position.name} ({position.location})',
+               position.date.strftime('%Y-%m-%d'), department_id, position.url)
     cursor.execute(
-        'INSERT INTO position VALUES '
-        f'("{position.name} ({position.location})", "{position.date:%Y-%m-%d}"'
-        f', {department_id}, "{position.url}");')
+        'INSERT INTO position VALUES (?, ?, ?, ?);', db_data) # nosec B608
 
 
 def _create_department_get(cursor, department: Department) -> int:
-    """
-        Create a department if it doesn't already exist and return id.
+    """Create a department if it doesn't already exist and return id.
 
     :param cursor: Database cursor.
     :param department: The department typing object to create in the database.
     :return: The id of the department in the database.
     """
     company_name = department.company.name
-    cursor.execute('SELECT rowid FROM department '
-                   f'WHERE company="{company_name}" '
-                   f'AND name="{department.name}";')
+    db_data = (company_name, department.name)
+    cursor.execute('SELECT rowid FROM department WHERE company=? AND name=?;',
+                   db_data) # nosec B608
     if (department_id := cursor.fetchone()) is None:
-        cursor.execute('INSERT INTO department VALUES '
-                       f'("{department.name}", "{company_name}");')
+        cursor.execute('INSERT INTO department (company, name) VALUES (?, ?);',
+                       db_data) # nosec B608
         cursor.execute('SELECT rowid FROM department '
-                       f'WHERE company="{company_name}" '
-                       f'AND name="{department.name}";')
+                       'WHERE company=? AND name=?;', db_data) # nosec B608
         department_id = cursor.fetchone()
     return department_id[0]
 
 
 def _create_company_if_not_exists(conn, cursor, company: Company):
-    cursor.execute(f'SELECT name FROM company WHERE name="{company.name}";')
+    db_data = (company.name,)
+    cursor.execute(
+        'SELECT name FROM company WHERE name=?;', db_data) # nosec B608
     if cursor.fetchone() is None:
-        cursor.execute(f'INSERT INTO company VALUES ("{company.name}");')
+        cursor.execute('INSERT INTO company VALUES (?);', db_data) # nosec B608
         conn.commit()
 
 

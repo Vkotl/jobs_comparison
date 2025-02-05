@@ -8,8 +8,7 @@ from .helpers import build_db_path
 
 
 def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
-    """
-        Get the company data from the database of the given date.
+    """Get the company data from the database of the given date.
 
     :param check_date: Date of the data.
     :param company: The company name.
@@ -18,20 +17,21 @@ def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
     res = {}
     with sqlite3.connect(build_db_path()) as conn:
         cursor = conn.cursor()
+        db_data = (check_date.strftime('%Y-%m-%d'), company)
         cursor.execute(
             'SELECT department.name, position.name, position.url '
             'FROM position '
             'INNER JOIN department ON position.department=department.rowid '
-            f'WHERE position.date="{check_date:%Y-%m-%d}" '
-            f'AND department.company="{company}";')
+            'WHERE position.date=? AND department.company=?;', db_data)
         positions = cursor.fetchall()
         if len(positions) == 0:
+            db_data = (company,)
             cursor.execute(
                 'SELECT position.date FROM position '
                 'INNER JOIN department '
                 'ON position.department=department.rowid '
-                f'WHERE department.company="{company}" '
-                f'ORDER BY position.date DESC LIMIT 1;')
+                'WHERE department.company=? '
+                'ORDER BY position.date DESC LIMIT 1;', db_data) # nosec B608
             entry_date = cursor.fetchone()
             recent_date = date.fromisoformat(entry_date[0])
             return get_data_db(recent_date, company)
@@ -47,8 +47,7 @@ def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
 
 
 def crosscheck_jobs(new_jobs: dict, old_jobs: dict) -> dict:
-    """
-        Return which positions are new and which are removed/filled.
+    """Return which positions are new and which are removed/filled.
 
     :param new_jobs: Dictionary of the open positions in the "new" date.
     :param old_jobs: Dictionary of the open positions in the "old" date.
@@ -80,8 +79,7 @@ def _handle_comparison(from_lst, to_lst, diff_dict):
 
 def get_company_jobs(old_date: date, new_date: date, company: str
                      ) -> tuple[tuple[dict, date], tuple[dict, date]]:
-    """
-        Get all the positions in the new and old dates from the database.
+    """Get all the positions in the new and old dates from the database.
 
     :param old_date: Date of the older positions.
     :param new_date: Date of the newer positions.
@@ -92,8 +90,7 @@ def get_company_jobs(old_date: date, new_date: date, company: str
 
 
 def print_difference(orig_dict):
-    """
-        Print the differences as structured, or print about no changes.
+    """Print the differences as structured, or print about no changes.
 
     :param orig_dict: Dictionary of differences.
     """
@@ -107,8 +104,7 @@ def print_difference(orig_dict):
 
 
 def get_position_changes(old_date: date, new_date: date, company: str) -> dict:
-    """
-        Retrieve the changes between positions in those two dates for company.
+    """Retrieve the changes between positions in those two dates for company.
 
     :param old_date: The old date to use for the old positions.
     :param new_date: The new date to use for the new positions.
