@@ -37,13 +37,28 @@ def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
             return get_data_db(recent_date, company)
         for position in positions:
             department = position[0]
-            pos_data = (position[1],
-                        position[2] if position[2] is not None else '')
+            pos_name = position[1]
+            pos_data = (pos_name,
+                        position[2] if position[2] is not None else '',
+                        is_brand_new(cursor, company, department, pos_name))
             if department in res:
                 res[department].append(pos_data)
             else:
                 res[department] = [pos_data]
     return res, check_date
+
+
+def is_brand_new(cursor, company: str, department: str, position: str
+                    ) -> bool:
+    """Check if a position appears for the first time in the department."""
+    cursor.execute(
+        'SELECT COUNT(*) FROM position '
+        'INNER JOIN department ON position.department=department.rowid '
+        'WHERE department.name=? AND position.name=? '
+        'AND department.company=?;', (department, position, company)
+    ) # nosec B608
+    count = cursor.fetchone()[0]
+    return count == 1
 
 
 def crosscheck_jobs(new_jobs: dict, old_jobs: dict) -> dict:
@@ -87,20 +102,6 @@ def get_company_jobs(old_date: date, new_date: date, company: str
     :return: The dates data and the positions.
     """
     return get_data_db(old_date, company), get_data_db(new_date, company)
-
-
-def print_difference(orig_dict):
-    """Print the differences as structured, or print about no changes.
-
-    :param orig_dict: Dictionary of differences.
-    """
-    if len(orig_dict) != 0:
-        for department in orig_dict:
-            print(f'  {department}:')
-            for pos in orig_dict[department]:
-                print(f'    {pos}')
-    else:
-        print('There are no changes.')
 
 
 def get_position_changes(old_date: date, new_date: date, company: str) -> dict:

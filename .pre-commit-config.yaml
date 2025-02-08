@@ -9,3 +9,11 @@ repos:
     rev: v0.9.2
     hooks:
       - id: ruff
+-   repo: local
+    hooks:
+      - id: frontend-eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npx lint-staged'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

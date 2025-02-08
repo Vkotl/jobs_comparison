@@ -10,39 +10,9 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from .proj_typing import Company, Department, Position
 from .helpers import delete_positions_date, build_db_path, strip_amp
-from .compare_positions import (
-    get_company_jobs, crosscheck_jobs, print_difference)
 from .constants import (
     GALILEO_CAREERS_URL, GALILEO_DEPARTMENT_WRAPPER_CLASS,
     GALILEO_DEPARTMENT_TITLE_CLASS, GALILEO_POSITION_WRAPPER_CLASS)
-
-
-def _handle_positions_dict(file_name, pos_dict):
-    with open(file_name, encoding='utf8') as f:
-        lines = f.read().splitlines()
-    lines.pop(0)
-    department = ''
-    while len(lines) > 0:
-        line = lines.pop(0)
-        if line.startswith('@'):
-            department = line[1:]
-            pos_dict[department] = []
-        else:
-            pos_dict[department].append(line)
-    return pos_dict
-
-
-def compare_galileo(old_date: date, new_date: date):
-    """Compare and print the positions differences between two dates."""
-    (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
-        old_date, new_date, 'Galileo')
-    difference = crosscheck_jobs(new_jobs, old_jobs)
-    print(f'Galileo changes between {old_date:%Y.%m.%d} and '
-          f'{new_date:%Y.%m.%d}')
-    print('New positions:')
-    print_difference(difference['new'])
-    print('Removed positions:')
-    print_difference(difference['removed'])
 
 
 def _handle_department(
@@ -134,12 +104,3 @@ def _create_company_if_not_exists(conn, cursor, company: Company):
     if cursor.fetchone() is None:
         cursor.execute('INSERT INTO company VALUES (?);', db_data) # nosec B608
         conn.commit()
-
-
-def _main():
-    scrape_galileo()
-    # compare_galileo()
-
-
-if __name__ == '__main__':
-    _main()

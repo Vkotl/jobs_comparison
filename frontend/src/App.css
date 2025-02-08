@@ -42,6 +42,10 @@
   top: 50%;
 }
 
+.new-position > a {
+  color: #9edf9c;
+}
+
 #changes-container h4 {
   margin-top: 0.8rem;
   margin-bottom: 0.4rem;
@@ -52,7 +56,7 @@
 }
 
 .change-group:first-of-type {
-    padding-bottom: 3rem;
+  padding-bottom: 3rem;
 }
 
 @keyframes logo-spin {

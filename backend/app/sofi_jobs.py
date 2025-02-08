@@ -10,23 +10,9 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from .proj_typing import Company
 from .helpers import delete_positions_date, build_db_path, strip_amp
-from .compare_positions import (
-    crosscheck_jobs, get_company_jobs, print_difference)
 from .constants import (
     SOFI_CAREERS_URL, SOFI_DEPARTMENT_TITLE_CLASS, SOFI_POSITION_WRAPPER_CLASS,
     SOFI_POSITION_TITLE_CLASS, SOFI_DEPARTMENT_WRAPPER_CLASS)
-
-
-def sofi_jobs_check(old_date: date, new_date: date):
-    """Compare and print the positions differences between two dates."""
-    (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
-        old_date, new_date, 'SoFi')
-    difference = crosscheck_jobs(new_jobs, old_jobs)
-    print(f'SoFi changes between {old_date:%Y.%m.%d} and {new_date:%Y.%m.%d}')
-    print('New positions:')
-    print_difference(difference['new'])
-    print('Removed positions:')
-    print_difference(difference['removed'])
 
 
 def scrape_sofi():
@@ -120,11 +106,3 @@ def _find_elems_class(objects, class_name):
 
 def _find_elem_class(objects, class_name):
     return objects.find_element(By.CLASS_NAME, value=class_name)
-
-
-def _main():
-    scrape_sofi()
-
-
-if __name__ == '__main__':
-    _main()

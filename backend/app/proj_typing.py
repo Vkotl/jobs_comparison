@@ -1,6 +1,6 @@
 """Typing module."""
 import datetime
-from typing import Optional
+from typing import Optional, LiteralString
 
 from pydantic import BaseModel
 
@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class Company(BaseModel):
     """Companies model."""
 
-    name: str
+    name: LiteralString
 
 
 class Department(BaseModel):
