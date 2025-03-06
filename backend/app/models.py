@@ -1,17 +1,11 @@
 """Database models and database creation."""
 from typing import List
-from pathlib import Path
 from datetime import datetime
 
-from sqlalchemy import String, Integer, ForeignKey, create_engine
-from sqlalchemy.orm import (
-    DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker)
+from sqlalchemy import String, Integer, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-class Base(DeclarativeBase):
-    """Base class for all database models."""
-
-    pass
+from .database import Base
 
 
 class Company(Base):
@@ -19,8 +13,8 @@ class Company(Base):
 
     __tablename__ = 'company'
 
-    name: Mapped[str] = mapped_column(String(10, collation='NOCASE'),
-                                      primary_key=True)
+    name: Mapped[str] = mapped_column(
+        String(10, collation='NOCASE'), primary_key=True)
 
     departments: Mapped[List['Department']] = relationship(
         back_populates='company', cascade='all, delete-orphan')
@@ -61,9 +55,3 @@ class Position(Base):
     def __repr__(self) -> str:
         return f'Position(name={self.name}) of {self.department}'
 
-
-engine = create_engine(
-    f'sqlite:///{Path(__file__).parent}/db.sqlite', echo=True)
-Session = sessionmaker(bind=engine)
-session = Session(autocommit=False)
-Base.metadata.create_all(engine)
