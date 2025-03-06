@@ -9,22 +9,10 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
 from .proj_typing import Company
-from .constants import SOFI_CAREERS_URL
-from .helpers import delete_positions_date, build_db_path
-from .compare_positions import (
-    crosscheck_jobs, get_company_jobs, print_difference)
-
-
-def sofi_jobs_check(old_date: date, new_date: date):
-    """Compare and print the positions differences between two dates."""
-    (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
-        old_date, new_date, 'SoFi')
-    difference = crosscheck_jobs(new_jobs, old_jobs)
-    print(f'SoFi changes between {old_date:%Y.%m.%d} and {new_date:%Y.%m.%d}')
-    print('New positions:')
-    print_difference(difference['new'])
-    print('Removed positions:')
-    print_difference(difference['removed'])
+from .helpers import delete_positions_date, build_db_path, strip_amp
+from .constants import (
+    SOFI_CAREERS_URL, SOFI_DEPARTMENT_TITLE_CLASS, SOFI_POSITION_WRAPPER_CLASS,
+    SOFI_POSITION_TITLE_CLASS, SOFI_DEPARTMENT_WRAPPER_CLASS)
 
 
 def scrape_sofi():
@@ -41,7 +29,7 @@ def scrape_sofi():
     driver.implicitly_wait(time_to_wait=40)
     driver.get(SOFI_CAREERS_URL)
     try:
-        departments = _find_elems_class(driver, 'dept')
+        departments = _find_elems_class(driver, SOFI_DEPARTMENT_WRAPPER_CLASS)
         conn = sqlite3.connect(build_db_path())
         company = Company(name='SoFi')
         cursor = conn.cursor()
@@ -62,43 +50,53 @@ def scrape_sofi():
     driver.close()
 
 
-def _create_position(cursor, department_id, jobdate, position):
-    cursor.execute(
-        'INSERT INTO position VALUES '
-        f'("{position}", "{jobdate:%Y-%m-%d}", {department_id});')
+def _create_position(cursor, department_id, jobdate: date, position):
+    data = (position[0], jobdate.strftime('%Y-%m-%d'), department_id,
+            position[1])
+    cursor.execute('INSERT INTO position VALUES (?, ?, ?, ?);', data)
 
 
 def _create_department_if_not_exists_get(cursor, department: str) -> int:
+    db_data = (department,)
     cursor.execute('SELECT rowid FROM department '
-                   f'WHERE company="SoFi" AND name="{department}";')
+                   'WHERE company="SoFi" AND name=?;', db_data) # nosec B608
     if (department_id := cursor.fetchone()) is None:
-        cursor.execute('INSERT INTO department VALUES '
-                       f'("{department}", "SoFi");')
-        cursor.execute('SELECT rowid FROM department '
-                       f'WHERE company="SoFi" AND name="{department}";')
+        cursor.execute('INSERT INTO department VALUES (?, "SoFi");',
+                       db_data) # nosec B608
+        cursor.execute(
+            'SELECT rowid FROM department WHERE company="SoFi" AND name=?;',
+            db_data) # nosec B608
         department_id = cursor.fetchone()
     return department_id[0]
 
 
-def _handle_department(department: WebElement) -> tuple[str, list]:
-    dept_name = _find_elem_class(department, 'dept-title').text.strip()
-    positions = _find_elems_class(department, 'job')
+def _handle_department(
+        department: WebElement) -> tuple[str, list[tuple[str, str]]]:
+    """Get data from the department element, like name and positions."""
+    dept_name = strip_amp(_find_elem_class(
+        department, SOFI_DEPARTMENT_TITLE_CLASS).text)
+    if dept_name.startswith('CC'):
+        dept_name = dept_name[dept_name.index(' ') + 1:]
+    positions = _find_elems_class(department, SOFI_POSITION_WRAPPER_CLASS)
     position_results = []
     for position in positions:
-        name = position.find_element(
-            By.CLASS_NAME, value='job-title').get_attribute('innerHTML')
-        if 'amp;' in name:
-            name = name.replace('amp;', '').strip()
+        name = strip_amp(position.find_element(
+            By.CLASS_NAME, value=SOFI_POSITION_TITLE_CLASS
+        ).get_attribute('innerHTML'))
+        url = position.get_attribute('data-link')
         # location = position.find_element(
         #     By.CLASS_NAME, value='job-location').get_attribute('innerHTML')
-        position_results.append(name)
+        position_results.append((name, url))
     return dept_name, position_results
 
 
 def _create_company_if_not_exists(conn, cursor, company: Company):
-    cursor.execute(f'SELECT name FROM company WHERE name="{company.name}";')
+    db_data = (company.name,)
+    cursor.execute(
+        'SELECT name FROM company WHERE name=?;', db_data) # nosec B608
     if cursor.fetchone() is None:
-        cursor.execute(f'INSERT INTO company VALUES ("{company.name}");')
+        cursor.execute(
+            'INSERT INTO company VALUES (?);', db_data) # nosec B608
         conn.commit()
 
 
@@ -108,11 +106,3 @@ def _find_elems_class(objects, class_name):
 
 def _find_elem_class(objects, class_name):
     return objects.find_element(By.CLASS_NAME, value=class_name)
-
-
-def _main():
-    scrape_sofi()
-
-
-if __name__ == '__main__':
-    _main()

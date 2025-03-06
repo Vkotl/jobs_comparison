@@ -25,3 +25,4 @@ class Position(BaseModel):
     date: datetime.date
     department: Department
     location: Optional[str]
+    url: str
