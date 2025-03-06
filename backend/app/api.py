@@ -42,7 +42,6 @@ def changes_week():
 @app.get('/changes')
 def recent_dates():
     """Display the last 10 dates in the database."""
-    print('I am here!')
     return {'last_10': get_last_10_dates()}
 
 
