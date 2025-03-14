@@ -1,11 +1,17 @@
 """Database models and database creation."""
 from typing import List
-from datetime import datetime
+# from datetime import date
 
+# from sqlalchemy.sql import func
+# from sqlalchemy import String, Integer, ForeignKey, Date
 from sqlalchemy import String, Integer, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
-from .database import Base
+
+class Base(DeclarativeBase):
+    """Base class for all database models."""
+
+    pass
 
 
 class Company(Base):
@@ -28,7 +34,8 @@ class Department(Base):
 
     __tablename__ = 'department'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(30))
     company_name: Mapped[str] = mapped_column(ForeignKey('company.name'))
 
@@ -45,13 +52,16 @@ class Position(Base):
 
     __tablename__ = 'position'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
-    date: Mapped[datetime] = mapped_column()
+    # date: Mapped[date] = mapped_column(
+    #     Date, nullable=False, server_default=func.today())
+    date: Mapped[str] = mapped_column(String(10))
+    url: Mapped[str] = mapped_column(String(300))
     department_name: Mapped[str] = mapped_column(ForeignKey('department.name'))
 
     department: Mapped['Department'] = relationship(back_populates='positions')
 
     def __repr__(self) -> str:
         return f'Position(name={self.name}) of {self.department}'
-

@@ -4,6 +4,9 @@ from pathlib import Path
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from .constants import DB_NAME
 from .proj_typing import Company
 
@@ -39,22 +42,23 @@ def get_date(*, is_old: bool) -> date:
     return chosen_date
 
 
-def delete_positions_date(cursor, jobs_date: date, company: Company):
+def delete_positions_date(db_session: Session, jobs_date: date, company: Company):
     """Delete positions for a given date in a specific company.
 
-    :param cursor: Database cursor.
+    :param db_session: Database session.
     :param jobs_date: The date for which the positions will be deleted.
     :param company: The company the positions belong to.
     """
-    db_data = (jobs_date.strftime('%Y-%m-%d'), company.name)
-    cursor.execute(
+    db_data = {'date': jobs_date.strftime('%Y-%m-%d'), 'comp': company.name}
+    stmt = text(
         'DELETE FROM position '
         'WHERE rowid in ('
         '    SELECT position.rowid as rowid from position '
         '    INNER JOIN department '
         '    ON position.department=department.rowid '
-        '    WHERE position.date=? AND department.company=?);', db_data
-    )
+        '    WHERE position.date=:date AND department.company=:comp);')
+    stmt = stmt.bindparams(**db_data)
+    db_session.execute(stmt)
 
 
 def build_db_path() -> Path:
@@ -62,8 +66,8 @@ def build_db_path() -> Path:
     return Path(__file__).parents[1].absolute() / DB_NAME
 
 
-def strip_amp(text: str) -> str:
+def strip_amp(raw_text: str) -> str:
     """Remove amp; from texts and then use strip()."""
-    if 'amp;' in text:
-        text = text.replace('amp;', '')
-    return text.strip()
+    if 'amp;' in raw_text:
+        raw_text = raw_text.replace('amp;', '')
+    return raw_text.strip()

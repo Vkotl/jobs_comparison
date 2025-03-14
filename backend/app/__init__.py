@@ -1,1 +1,1 @@
-"""Backend app module."""
+"""Backend app package."""

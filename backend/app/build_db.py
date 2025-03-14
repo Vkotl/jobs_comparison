@@ -1,6 +1,6 @@
 """Module for creating and also printing the schema of the database."""
-# from sqlalchemy import create_engine
-# from sqlalchemy.orm import Session
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 # import sqlite3
 #
 # from helpers import build_db_path
@@ -22,14 +22,16 @@
 #         # print_db_schema(cursor)
 
 
-def print_db_schema(cursor):
+def print_db_schema(conn: Session):
     """Print the schema of the database."""
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
+    tables = conn.execute(
+        text("SELECT name FROM sqlite_master WHERE type='table';"))
+    # tables = cursor.fetchall()
     for table in tables:
         print(table[0])
-        cursor.execute(f'SELECT * FROM {table[0]}') # nosec B608
-        print(cursor.description)
+        stmt = text('SELECT * FROM :table')
+        stmt = stmt.bindparams(table=table[0])
+        print(conn.execute(stmt).first().description) # nosec B608
 
 
 # def handle_db_creation():
