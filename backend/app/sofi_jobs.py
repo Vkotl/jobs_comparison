@@ -2,16 +2,18 @@
 import pytz
 from datetime import date, datetime
 
-from sqlalchemy import text, select
 from selenium import webdriver
+from sqlalchemy.orm import Session
+from sqlalchemy import select, insert
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
-from sqlalchemy.orm import Session
 
 from .proj_typing import Company
-from .models import Department as db_Department
 from .helpers import delete_positions_date, strip_amp
+from .models import (
+    Department as db_Department, Company as db_Company,
+    Position as db_Position)
 from .constants import (
     SOFI_CAREERS_URL, SOFI_DEPARTMENT_TITLE_CLASS, SOFI_POSITION_WRAPPER_CLASS,
     SOFI_POSITION_TITLE_CLASS, SOFI_DEPARTMENT_WRAPPER_CLASS)
@@ -32,9 +34,7 @@ def scrape_sofi(db_session):
     driver.get(SOFI_CAREERS_URL)
     try:
         departments = _find_elems_class(driver, SOFI_DEPARTMENT_WRAPPER_CLASS)
-        # conn = sqlite3.connect(build_db_path())
         company = Company(name='SoFi')
-        # cursor = conn.cursor()
         _create_company_if_not_exists(db_session, company)
         position_date = datetime.now(pytz.timezone('US/Eastern')).date()
         delete_positions_date(db_session, position_date, company)
@@ -46,30 +46,26 @@ def scrape_sofi(db_session):
                 _create_position(
                     db_session, department_id, position_date, position)
         db_session.commit()
-        # conn.close()
     except TimeoutException:
         print('Failed')
     driver.close()
 
 
 def _create_position(db_session, department_id, jobdate: date, position):
-    data = (position[0], jobdate.strftime('%Y-%m-%d'), department_id,
-            position[1])
-    db_session.execute(text('INSERT INTO position VALUES (?, ?, ?, ?);'), data)
+    db_session.execute(insert(db_Position).values(
+        name=position[0], scrape_date=jobdate, url=position[1],
+        department_id=department_id))
 
 
-def _create_department_if_not_exists_get(db_session: Session, department: str) -> int:
+def _create_department_if_not_exists_get(
+        db_session: Session, department: str) -> str:
     stmt = select(db_Department.id).where(
         (db_Department.name == department)
         & (db_Department.company_name == 'SoFi'))
     department_id = db_session.execute(stmt).first()
-    # if (department_id := cursor.fetchone()) is None:
     if department_id is None:
-        insert_stmt = text('INSERT INTO department VALUES (:dept, "SoFi");')
-        insert_stmt = insert_stmt.bindparams(dept=department)
-        db_session.execute(insert_stmt)
+        db_session.execute(insert(db_Department).values((department, 'SoFi')))
         department_id = db_session.execute(stmt).first()
-        # department_id = cursor.fetchone()
     return department_id[0]
 
 
@@ -87,21 +83,16 @@ def _handle_department(
             By.CLASS_NAME, value=SOFI_POSITION_TITLE_CLASS
         ).get_attribute('innerHTML'))
         url = position.get_attribute('data-link')
-        # location = position.find_element(
-        #     By.CLASS_NAME, value='job-location').get_attribute('innerHTML')
         position_results.append((name, url))
     return dept_name, position_results
 
 
 def _create_company_if_not_exists(db_session, company: Company):
-    # db_data = (company.name,)
-    stmt = text('SELECT name FROM company WHERE name=:comp;')
-    stmt = stmt.bindparams(comp=company.name)
+    stmt = select(db_Company.name).where(db_Company.name == company.name)
     res = db_session.execute(stmt).first()
     if res is None:
-        stmt = text('INSERT INTO company VALUES (?);')
-        stmt = stmt.bindparams(comp=company.name)
-        db_session.execute(stmt)
+        insert(db_Company).values(name=company.name)
+        db_session.execute(insert(db_Company).values(name=company.name))
         db_session.commit()
 
 

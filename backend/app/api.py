@@ -42,9 +42,9 @@ def changes_week(db_session: Session = Depends(get_session)):
 
 
 @app.get('/changes')
-def recent_dates():
+def recent_dates(db_session: Session = Depends(get_session)):
     """Display the last 10 dates in the database."""
-    return {'last_10': get_last_10_dates()}
+    return {'last_10': get_last_10_dates(db_session)}
 
 
 @app.get('/changes/{old_date}-{new_date}')
@@ -53,8 +53,8 @@ def changes_two_dates(old_date: str, new_date: str,
                       db_session: Session = Depends(get_session)):
     """Display the changes between the old date and the new date."""
     print(old_date, new_date)
-    old_date = datetime.strptime(old_date, '%Y%m%d')
-    new_date = datetime.strptime(new_date, '%Y%m%d')
+    old_date = datetime.strptime(old_date, '%Y%m%d').date()
+    new_date = datetime.strptime(new_date, '%Y%m%d').date()
     return handle_changes_response(db_session, old_date, new_date)
 
 
@@ -65,6 +65,8 @@ def changes_single_date(new_date: str,
     """Display the changes the new date and previous Friday."""
     new_date = datetime.strptime(new_date, '%Y%m%d')
     old_date = new_date + relativedelta(weekday=FR(-1))
+    if new_date == old_date:
+        old_date += relativedelta(weekday=FR(-2))
     return handle_changes_response(db_session, old_date, new_date)
 
 

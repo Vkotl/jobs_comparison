@@ -3,8 +3,8 @@ import pytz
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
-from sqlalchemy import text, select
 from sqlalchemy.orm import Session
+from sqlalchemy import select, desc, func
 
 from .models import Department, Position
 
@@ -19,39 +19,19 @@ def get_data_db(
     :return: Data related to the company structured in a dictionary.
     """
     res = {}
-    db_data = {'date': check_date.strftime('%Y-%m-%d'), 'comp': company}
-    # db_data = {'date': check_date, 'comp': company}
-    stmt = select(Department.name, Position.name, Position.url).join(
-        Department, Department.id == Position.department).where(
-        (Position.date == db_data['date'])
-        & (Department.company == db_data['comp'])
-    )
-    # stmt = text(
-    #     'SELECT department.name, position.name, position.url '
-    #     'FROM position '
-    #     'INNER JOIN department ON position.department=department.rowid '
-    #     'WHERE position.date=:date AND department.company=:comp;')
-    # stmt = stmt.bindparams(**db_data)
+    stmt = select(Department.name, Position.name, Position.url).select_from(
+        Position).join(Department, Position.department_id == Department.id
+    ).where(Position.scrape_date == check_date,
+            Department.company_name == company)
     query_res = db_session.execute(stmt).all()
-    print(f'{query_res=}')
     if len(query_res) == 0:
-        # db_data = (company,)
-        stmt = text(
-            'SELECT position.date FROM position '
-            'INNER JOIN department '
-            'ON position.department=department.rowid '
-            'WHERE department.company=:comp '
-            'ORDER BY position.date DESC LIMIT 1;')
-        stmt = stmt.bindparams(comp=company)
-        # res = db_session.execute(stmt)
-        entry_date = db_session.execute(stmt)
-        print(f'{entry_date=}')
+        stmt = select(Position.scrape_date).select_from(Position).join(
+            Department, Position.department_id == Department.id
+        ).where(Department.company_name == company).order_by(
+            desc(Position.scrape_date)).limit(1)
         entry_date = db_session.execute(stmt).fetchone()
-        print(f'{entry_date=}')
-        recent_date = date.fromisoformat(entry_date[0])
-        return get_data_db(db_session, recent_date, company)
+        return get_data_db(db_session, entry_date[0], company)
     for position in query_res:
-        print(f'{position=}')
         department = position[0]
         pos_name = position[1]
         pos_data = (pos_name,
@@ -61,51 +41,17 @@ def get_data_db(
             res[department].append(pos_data)
         else:
             res[department] = [pos_data]
-
-    # with sqlite3.connect(build_db_path()) as conn:
-    #     cursor = conn.cursor()
-    #     db_data = (check_date.strftime('%Y-%m-%d'), company)
-    #     cursor.execute(
-    #         'SELECT department.name, position.name, position.url '
-    #         'FROM position '
-    #         'INNER JOIN department ON position.department=department.rowid '
-    #         'WHERE position.date=? AND department.company=?;', db_data)
-    #     positions = cursor.fetchall()
-    #     if len(positions) == 0:
-    #         db_data = (company,)
-    #         cursor.execute(
-    #             'SELECT position.date FROM position '
-    #             'INNER JOIN department '
-    #             'ON position.department=department.rowid '
-    #             'WHERE department.company=? '
-    #             'ORDER BY position.date DESC LIMIT 1;', db_data) # nosec B608
-    #         entry_date = cursor.fetchone()
-    #         recent_date = date.fromisoformat(entry_date[0])
-    #         return get_data_db(recent_date, company)
-    #     for position in positions:
-    #         department = position[0]
-    #         pos_name = position[1]
-    #         pos_data = (pos_name,
-    #                     position[2] if position[2] is not None else '',
-    #                     is_brand_new(cursor, company, department, pos_name))
-    #         if department in res:
-    #             res[department].append(pos_data)
-    #         else:
-    #             res[department] = [pos_data]
     return res, check_date
 
 
 def is_brand_new(
     db_session: Session, company: str, department: str, position: str) -> bool:
     """Check if a position appears for the first time in the department."""
-    query =  text(
-        'SELECT COUNT(*) FROM position '
-        'INNER JOIN department ON position.department=department.id '
-        'WHERE department.name=:dept AND position.name=:pos '
-        'AND department.company=:comp;')
-    query = query.bindparams(dept=department, pos=position, comp=company)
-    count = db_session.execute(query).fetchone()[0]
-    # count = cursor.fetchone()[0]
+    stmt = select(func.count()).select_from(Position).join(
+        Department, Position.department_id == Department.id).where(
+        Department.name == department, Position.name == position,
+        Department.company_name == company)
+    count = db_session.execute(stmt).fetchone()[0]
     return count == 1
 
 

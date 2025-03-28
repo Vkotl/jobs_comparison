@@ -1,10 +1,9 @@
 """Database models and database creation."""
 from typing import List
-# from datetime import date
+from datetime import date
 
-# from sqlalchemy.sql import func
-# from sqlalchemy import String, Integer, ForeignKey, Date
-from sqlalchemy import String, Integer, ForeignKey
+from sqlalchemy.sql import func
+from sqlalchemy import String, Integer, ForeignKey, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
 
@@ -55,13 +54,13 @@ class Position(Base):
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
-    # date: Mapped[date] = mapped_column(
-    #     Date, nullable=False, server_default=func.today())
-    date: Mapped[str] = mapped_column(String(10))
-    url: Mapped[str] = mapped_column(String(300))
-    department_name: Mapped[str] = mapped_column(ForeignKey('department.name'))
+    scrape_date: Mapped[date] = mapped_column(
+        Date, nullable=False, server_default=func.current_date())
+    url: Mapped[str] = mapped_column(String(300), nullable=True)
+    department_id: Mapped[int] = mapped_column(ForeignKey('department.id'))
 
     department: Mapped['Department'] = relationship(back_populates='positions')
 
     def __repr__(self) -> str:
-        return f'Position(name={self.name}) of {self.department}'
+        return (f'Position(name={self.name}) of '
+                f'{self.department.name} {{{self.scrape_date}}}')

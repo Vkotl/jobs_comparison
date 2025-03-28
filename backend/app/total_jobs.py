@@ -1,32 +1,16 @@
 """Module to combine both Galileo and SoFi job treatment modules."""
-import sqlite3
+from sqlalchemy.orm import Session
+from sqlalchemy import select, desc
 
-from .helpers import build_db_path
-
-
-def print_last_10_dates():
-    """Print the last 10 dates from the database."""
-    with sqlite3.connect(build_db_path()) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT DISTINCT date from position '
-                       'ORDER BY date DESC LIMIT 10;')
-        dates = cursor.fetchall()
-        for pos_date in dates[::-1]:
-            if pos_date != dates[0]:
-                print(pos_date[0], end=', ')
-            else:
-                print(pos_date[0])
+from .models import Position
 
 
-def get_last_10_dates():
+def get_last_10_dates(db_session: Session) -> list[str]:
     """Retrieve the last 10 dates from the database."""
-    print('I am inside getting last 10 dates')
-    with sqlite3.connect(build_db_path()) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT DISTINCT date from position '
-                       'ORDER BY date DESC LIMIT 10;')
-        dates = cursor.fetchall()
-        res = []
-        for pos_date in dates[::-1]:
-            res.append(pos_date[0])
-        return res
+    stmt = select(Position.scrape_date).distinct().order_by(
+        desc(Position.scrape_date)).limit(10)
+    dates = db_session.execute(stmt)
+    res = []
+    for pos_date in dates:
+        res.append(pos_date[0])
+    return res[::-1]
