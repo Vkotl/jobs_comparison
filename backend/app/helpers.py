@@ -62,8 +62,10 @@ def build_db_path() -> Path:
     return Path(__file__).parents[1].absolute() / DB_NAME
 
 
-def strip_amp(text: str) -> str:
-    """Remove amp; from texts and then use strip()."""
-    if 'amp;' in text:
-        text = text.replace('amp;', '')
+def strip_html_chr(text: str) -> str:
+    """Remove amp; and &nbsp; from texts and then use strip()."""
+    replacements = {'amp;': '', '&nbsp;': ' '}
+    for key, value in replacements.items():
+        if key in text:
+            text = text.replace(key, value)
     return text.strip()

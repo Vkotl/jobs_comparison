@@ -9,7 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
 from .proj_typing import Company, Department, Position
-from .helpers import delete_positions_date, build_db_path, strip_amp
+from .helpers import delete_positions_date, build_db_path, strip_html_chr
 from .constants import (
     GALILEO_CAREERS_URL, GALILEO_DEPARTMENT_WRAPPER_CLASS,
     GALILEO_DEPARTMENT_TITLE_CLASS, GALILEO_POSITION_WRAPPER_CLASS)
@@ -26,8 +26,8 @@ def _handle_department(
     for position in positions:
         url_element = position.find_element(By.TAG_NAME, value='a')
         url = url_element.get_attribute('href')
-        name = strip_amp(url_element.get_attribute('innerHTML'))
-        location = strip_amp(position.find_element(
+        name = strip_html_chr(url_element.get_attribute('innerHTML'))
+        location = strip_html_chr(position.find_element(
             By.TAG_NAME, value='div').get_attribute('innerHTML'))
         position_results.append(
             Position(name=name, location=location, department=dept_obj,

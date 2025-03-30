@@ -9,7 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
 from .proj_typing import Company
-from .helpers import delete_positions_date, build_db_path, strip_amp
+from .helpers import delete_positions_date, build_db_path, strip_html_chr
 from .constants import (
     SOFI_CAREERS_URL, SOFI_DEPARTMENT_TITLE_CLASS, SOFI_POSITION_WRAPPER_CLASS,
     SOFI_POSITION_TITLE_CLASS, SOFI_DEPARTMENT_WRAPPER_CLASS)
@@ -73,14 +73,14 @@ def _create_department_if_not_exists_get(cursor, department: str) -> int:
 def _handle_department(
         department: WebElement) -> tuple[str, list[tuple[str, str]]]:
     """Get data from the department element, like name and positions."""
-    dept_name = strip_amp(_find_elem_class(
+    dept_name = strip_html_chr(_find_elem_class(
         department, SOFI_DEPARTMENT_TITLE_CLASS).text)
     if dept_name.startswith('CC'):
         dept_name = dept_name[dept_name.index(' ') + 1:]
     positions = _find_elems_class(department, SOFI_POSITION_WRAPPER_CLASS)
     position_results = []
     for position in positions:
-        name = strip_amp(position.find_element(
+        name = strip_html_chr(position.find_element(
             By.CLASS_NAME, value=SOFI_POSITION_TITLE_CLASS
         ).get_attribute('innerHTML'))
         url = position.get_attribute('data-link')
