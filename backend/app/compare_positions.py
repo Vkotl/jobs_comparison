@@ -1,63 +1,57 @@
 """Comparison and data retrival from the database."""
 import pytz
-import sqlite3
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
-from .helpers import build_db_path
+from sqlalchemy.orm import Session
+from sqlalchemy import select, desc, func
+
+from .models import Department, Position
 
 
-def get_data_db(check_date: date, company: str) -> tuple[dict, date]:
+def get_data_db(
+    db_session: Session, check_date: date, company: str) -> tuple[dict, date]:
     """Get the company data from the database of the given date.
 
+    :param db_session: SQLAlchemy session.
     :param check_date: Date of the data.
     :param company: The company name.
     :return: Data related to the company structured in a dictionary.
     """
     res = {}
-    with sqlite3.connect(build_db_path()) as conn:
-        cursor = conn.cursor()
-        db_data = (check_date.strftime('%Y-%m-%d'), company)
-        cursor.execute(
-            'SELECT department.name, position.name, position.url '
-            'FROM position '
-            'INNER JOIN department ON position.department=department.rowid '
-            'WHERE position.date=? AND department.company=?;', db_data)
-        positions = cursor.fetchall()
-        if len(positions) == 0:
-            db_data = (company,)
-            cursor.execute(
-                'SELECT position.date FROM position '
-                'INNER JOIN department '
-                'ON position.department=department.rowid '
-                'WHERE department.company=? '
-                'ORDER BY position.date DESC LIMIT 1;', db_data) # nosec B608
-            entry_date = cursor.fetchone()
-            recent_date = date.fromisoformat(entry_date[0])
-            return get_data_db(recent_date, company)
-        for position in positions:
-            department = position[0]
-            pos_name = position[1]
-            pos_data = (pos_name,
-                        position[2] if position[2] is not None else '',
-                        is_brand_new(cursor, company, department, pos_name))
-            if department in res:
-                res[department].append(pos_data)
-            else:
-                res[department] = [pos_data]
+    stmt = select(Department.name, Position.name, Position.url).select_from(
+        Position).join(Department, Position.department_id == Department.id
+    ).where(Position.scrape_date == check_date,
+            Department.company_name == company)
+    query_res = db_session.execute(stmt).all()
+    if len(query_res) == 0:
+        stmt = select(Position.scrape_date).select_from(Position).join(
+            Department, Position.department_id == Department.id
+        ).where(Department.company_name == company).order_by(
+            desc(Position.scrape_date)).limit(1)
+        entry_date = db_session.execute(stmt).fetchone()
+        return get_data_db(db_session, entry_date[0], company)
+    for position in query_res:
+        department = position[0]
+        pos_name = position[1]
+        pos_data = (pos_name,
+                    position[2] if position[2] is not None else '',
+                    is_brand_new(db_session, company, department, pos_name))
+        if department in res:
+            res[department].append(pos_data)
+        else:
+            res[department] = [pos_data]
     return res, check_date
 
 
-def is_brand_new(cursor, company: str, department: str, position: str
-                    ) -> bool:
+def is_brand_new(
+    db_session: Session, company: str, department: str, position: str) -> bool:
     """Check if a position appears for the first time in the department."""
-    cursor.execute(
-        'SELECT COUNT(*) FROM position '
-        'INNER JOIN department ON position.department=department.rowid '
-        'WHERE department.name=? AND position.name=? '
-        'AND department.company=?;', (department, position, company)
-    ) # nosec B608
-    count = cursor.fetchone()[0]
+    stmt = select(func.count()).select_from(Position).join(
+        Department, Position.department_id == Department.id).where(
+        Department.name == department, Position.name == position,
+        Department.company_name == company)
+    count = db_session.execute(stmt).fetchone()[0]
     return count == 1
 
 
@@ -92,38 +86,44 @@ def _handle_comparison(from_lst, to_lst, diff_dict):
                 del diff_dict[department]
 
 
-def get_company_jobs(old_date: date, new_date: date, company: str
-                     ) -> tuple[tuple[dict, date], tuple[dict, date]]:
+def get_company_jobs(
+    db_session: Session, old_date: date, new_date: date, company: str
+    ) -> tuple[tuple[dict, date], tuple[dict, date]]:
     """Get all the positions in the new and old dates from the database.
 
+    :param db_session: SQLAlchemy session.
     :param old_date: Date of the older positions.
     :param new_date: Date of the newer positions.
     :param company: The company name.
     :return: The dates data and the positions.
     """
-    return get_data_db(old_date, company), get_data_db(new_date, company)
+    return (get_data_db(db_session, old_date, company),
+            get_data_db(db_session, new_date, company))
 
 
-def get_position_changes(old_date: date, new_date: date, company: str) -> dict:
+def get_position_changes(
+    db_session: Session, old_date: date, new_date: date, company: str) -> dict:
     """Retrieve the changes between positions in those two dates for company.
 
+    :param db_session: SQLAlchemy session.
     :param old_date: The old date to use for the old positions.
     :param new_date: The new date to use for the new positions.
     :param company: The company name that the positions belong to.
     :return: Dictionary of changes.
     """
     (old_jobs, old_date), (new_jobs, new_date) = get_company_jobs(
-        old_date, new_date, company)
+        db_session, old_date, new_date, company)
     difference = crosscheck_jobs(new_jobs, old_jobs)
     return difference
 
 
-def handle_changes_response(old_date: date, new_date: date) -> dict:
+def handle_changes_response(
+    db_session: Session, old_date: date, new_date: date) -> dict:
     """Handle the response with positions changes."""
     if datetime.now(pytz.timezone('US/Eastern')).date() == old_date:
         old_date += relativedelta(weekday=FR(-2))
-    sofi = get_position_changes(old_date, new_date, 'SoFi')
-    galileo = get_position_changes(old_date, new_date, 'Galileo')
+    sofi = get_position_changes(db_session, old_date, new_date, 'SoFi')
+    galileo = get_position_changes(db_session, old_date, new_date, 'Galileo')
     return {'new_date': new_date.strftime('%Y-%m-%d'),
             'previous_date': old_date.strftime('%Y-%m-%d'), 'sofi': sofi,
             'galileo': galileo}

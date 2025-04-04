@@ -1,5 +1,5 @@
 """Typing module."""
-import datetime
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
@@ -22,7 +22,7 @@ class Position(BaseModel):
     """Positions model."""
 
     name: str
-    date: datetime.date
+    scrape_date: date
     department: Department
     location: Optional[str]
     url: str
