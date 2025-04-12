@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [array, setArray] = useState([]);
   const [dates, setDates] = React.useState(true);
   const fetchAPI = async () => {
-    const response = await axios.get("http://localhost:3000/changes");
+    const response = await axios.get("http://localhost/api/changes");
     setArray(response.data.last_10);
   };
   useEffect(() => {
@@ -34,7 +34,7 @@ const App: React.FC = () => {
     setDates(false);
   };
   const HandleScrapeButton = async () => {
-    await axios.post("http://localhost:3000/grab_data");
+    await axios.post("http://localhost/api/grab_data");
   };
   return (
     /* This wraps the HTML in a single element without giving a specific one,

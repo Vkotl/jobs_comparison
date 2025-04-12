@@ -25,7 +25,7 @@ export const ChangesDataComponent: React.FC = () => {
     decision = `${first.replace(/-/g, "").split(" ")[0]}-${second.replace(/-/g, "").split(" ")[0]}`;
   }
   if (decision !== undefined) {
-    axios.get("http://localhost:3000/changes/" + decision).then((response) => {
+    axios.get("http://localhost/api/changes/" + decision).then((response) => {
       setChanges(response.data);
     });
   }

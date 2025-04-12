@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta, FR
 
 import pytz
 from sqlalchemy.orm import Session
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import get_session
@@ -16,22 +16,23 @@ from .decorators import date_verification
 from .compare_positions import handle_changes_response
 
 app = FastAPI()
+router = APIRouter(prefix='/api')
 
-origins = [
-    'http://localhost:8000',
-    'localhost:8000'
-]
+# origins = [
+#     'http://backend-service:8000',
+#     'backend-service:8000'
+# ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    # allow_origins=origins,
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
 )
 
 
-@app.get('/changes/week')
+@router.get('/changes/week')
 @date_verification
 def changes_week(db_session: Session = Depends(get_session)):
     """Handle root URL where it returns last week changes."""
@@ -41,13 +42,13 @@ def changes_week(db_session: Session = Depends(get_session)):
     return handle_changes_response(db_session, old_date, chosen_date)
 
 
-@app.get('/changes')
+@router.get('/changes')
 def recent_dates(db_session: Session = Depends(get_session)):
     """Display the last 10 dates in the database."""
     return {'last_10': get_last_10_dates(db_session)}
 
 
-@app.get('/changes/{old_date}-{new_date}')
+@router.get('/changes/{old_date}-{new_date}')
 @date_verification
 def changes_two_dates(old_date: str, new_date: str,
                       db_session: Session = Depends(get_session)):
@@ -58,7 +59,7 @@ def changes_two_dates(old_date: str, new_date: str,
     return handle_changes_response(db_session, old_date, new_date)
 
 
-@app.get('/changes/{new_date}')
+@router.get('/changes/{new_date}')
 @date_verification
 def changes_single_date(new_date: str,
                         db_session: Session = Depends(get_session)):
@@ -70,7 +71,7 @@ def changes_single_date(new_date: str,
     return handle_changes_response(db_session, old_date, new_date)
 
 
-@app.post('/grab_data')
+@router.post('/grab_data')
 def grab_data(db_session: Session = Depends(get_session)):
     """Scrape positions data from the sites and save in the database."""
     try:
@@ -80,3 +81,6 @@ def grab_data(db_session: Session = Depends(get_session)):
         print(e)
         return {'error': 'Scraping failed.'}
     return {'success': 'Scraping completed.'}
+
+
+app.include_router(router)

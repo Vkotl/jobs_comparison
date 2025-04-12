@@ -41,7 +41,7 @@ def _handle_department(
 
 def scrape_galileo(db_session: Session):
     """Scrape the Galileo positions from the site."""
-    driver = webdriver.Firefox()
+    driver = webdriver.Chrome()
     driver.implicitly_wait(time_to_wait=20)
     driver.get(GALILEO_CAREERS_URL)
     try:
