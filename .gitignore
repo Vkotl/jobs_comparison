@@ -5,3 +5,4 @@
 *.db
 __pycache__
 extra_scripts
+backend/downloaded_files

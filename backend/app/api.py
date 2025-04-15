@@ -9,9 +9,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import get_session
-from .sofi_jobs import scrape_sofi
-from .galileo_jobs import scrape_galileo
-from .total_jobs import get_last_10_dates
+from .total_jobs import get_last_10_dates, scrape_and_create_positions
 from .decorators import date_verification
 from .compare_positions import handle_changes_response
 
@@ -74,8 +72,8 @@ def changes_single_date(new_date: str,
 def grab_data(db_session: Session = Depends(get_session)):
     """Scrape positions data from the sites and save in the database."""
     try:
-        scrape_sofi(db_session)
-        scrape_galileo(db_session)
+        scrape_and_create_positions(db_session, 'SoFi')
+        scrape_and_create_positions(db_session, 'Galileo', delay=15)
     except Exception as e:
         print(e)
         return {'error': 'Scraping failed.'}
