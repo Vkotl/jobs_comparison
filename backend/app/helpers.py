@@ -5,11 +5,53 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, insert
 
 from .constants import DB_NAME
-from .proj_typing import Company
-from .models import Position as db_Position, Department as db_Department
+from .proj_typing import Company, Position, Department
+from .models import (Position as db_Position, Department as db_Department,
+                     Company as db_Company)
+
+
+def create_position(db_session, department_id, position: Position):
+    """Create database entry for the position."""
+    db_session.execute(insert(db_Position).values(
+        name=position.name, scrape_date=position.scrape_date, url=position.url,
+        department_id=department_id))
+
+
+def create_and_get_department(
+        db_session: Session, department: Department) -> str:
+    """Create a department if it doesn't already exist and return id.
+
+    :param db_session: The connection to the sqlalchemy engine.
+    :param department: The Department typing object to create in the database.
+    :return: The id of the department in the database.
+    """
+    company_name: str = department.company.name
+    db_data: dict[str: str] = {
+        'company_name': company_name, 'name': department.name}
+    stmt = select(db_Department.id).where(
+        (db_Department.name == department.name)
+        & (db_Department.company_name == company_name))
+    department_id = db_session.execute(stmt).first()
+    if department_id is None:
+        db_session.execute(insert(db_Department).values(db_data))
+        department_id = db_session.execute(stmt).first()
+    return department_id[0]
+
+
+def create_company_if_not_exists(db_session, company: Company):
+    """Create a company in the database if it didn't exist.
+
+    :param db_session: Database Session.
+    :param company: Company with the data to create the entry.
+    """
+    stmt = select(db_Company.name).where(db_Company.name == company.name)
+    res = db_session.execute(stmt).first()
+    if res is None:
+        db_session.execute(insert(db_Company).values(name=company.name))
+        db_session.commit()
 
 
 def get_date(*, is_old: bool) -> date:
@@ -63,12 +105,3 @@ def delete_positions_date(db_session: Session, jobs_date: date,
 def build_db_path() -> Path:
     """Build the database path."""
     return Path(__file__).parents[1].absolute() / DB_NAME
-
-
-def strip_html_chr(text: str) -> str:
-    """Remove amp; and &nbsp; from texts and then use strip()."""
-    replacements = {'amp;': '', '&nbsp;': ' '}
-    for key, value in replacements.items():
-        if key in text:
-            text = text.replace(key, value)
-    return text.strip()

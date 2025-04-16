@@ -1,0 +1,19 @@
+{
+  "SoFi": {
+    "url": "https://www.sofi.com/careers/",
+    "classes": {
+      "position wrapper": "job",
+      "department wrapper": "dept",
+      "position title": "job-title",
+      "department title": "dept-title"
+    }
+  },
+  "Galileo": {
+    "url": "https://www.galileo-ft.com/careers/",
+    "classes": {
+      "position wrapper": "Opening__Wrapper-sc-1ghm7ee-0",
+      "department wrapper": "DepartmentSection__Wrapper-sc-1gi5hyp-0",
+      "department title": "DepartmentSection__Title-sc-1gi5hyp-2"
+    }
+  }
+}

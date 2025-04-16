@@ -1,8 +1,17 @@
 """Module to combine both Galileo and SoFi job treatment modules."""
+import json
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
 from .models import Position
+from .scrape_api import ScrapeAPI
+from .exceptions import CompanyNotInJSONError
+from .constants import APP_FOLDER, COMPANY_JSON
+from .helpers import (
+    create_and_get_department, create_position, delete_positions_date,
+    create_company_if_not_exists)
 
 
 def get_last_10_dates(db_session: Session) -> list[str]:
@@ -14,3 +23,21 @@ def get_last_10_dates(db_session: Session) -> list[str]:
     for pos_date in dates:
         res.append(pos_date[0])
     return res[::-1]
+
+
+def scrape_and_create_positions(db_session: Session, company_name: str,
+                                delay: int = 0):
+    """Scrape the company site and save the data in the database."""
+    with Path(APP_FOLDER, COMPANY_JSON).open() as f:
+        data = json.load(f).get(company_name, None)
+    if data is None:
+        raise CompanyNotInJSONError()
+    scraper = ScrapeAPI(data, company_name, delay=delay)
+    positions = scraper.scrape()
+    company = scraper.company
+    create_company_if_not_exists(db_session, company)
+    delete_positions_date(db_session, positions[0].scrape_date, company)
+    department_id = create_and_get_department(
+        db_session, positions[0].department)
+    for position in positions:
+        create_position(db_session, department_id, position)

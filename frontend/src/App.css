@@ -23,6 +23,7 @@
 
 .department {
   padding-left: 1.5rem;
+  break-inside: avoid;
 }
 
 #changes-container > .text-center.row {
