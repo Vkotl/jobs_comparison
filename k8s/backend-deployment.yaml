@@ -18,6 +18,16 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
+        volumeMounts:
+          - mountPath: /backend/sofijobs.db
+            name: database-volume
+            readOnly: false
+      volumes:
+        - name: database-volume
+          hostPath:
+            path: backend/sofijobs.db
+            type: File
+
 ---
 apiVersion: v1
 kind: Service

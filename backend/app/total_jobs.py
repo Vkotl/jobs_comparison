@@ -7,8 +7,8 @@ from sqlalchemy import select, desc
 
 from .models import Position
 from .scrape_api import ScrapeAPI
-from .exceptions import CompanyNotInJSONError
 from .constants import APP_FOLDER, COMPANY_JSON
+from .exceptions import CompanyNotInJSONError, FailedScrapeError
 from .helpers import (
     create_and_get_department, create_position, delete_positions_date,
     create_company_if_not_exists)
@@ -32,12 +32,20 @@ def scrape_and_create_positions(db_session: Session, company_name: str,
         data = json.load(f).get(company_name, None)
     if data is None:
         raise CompanyNotInJSONError()
-    scraper = ScrapeAPI(data, company_name, delay=delay)
-    positions = scraper.scrape()
+    attempts = 0
+    positions = []
+    while len(positions) == 0 and attempts <= 1:
+        scraper = ScrapeAPI(data, company_name, delay=delay)
+        positions = scraper.scrape()
+        print(positions)
+        attempts += 1
+    if len(positions) == 0:
+        raise FailedScrapeError()
     company = scraper.company
     create_company_if_not_exists(db_session, company)
     delete_positions_date(db_session, positions[0].scrape_date, company)
-    department_id = create_and_get_department(
-        db_session, positions[0].department)
     for position in positions:
+        department_id = create_and_get_department(
+            db_session, positions.department)
         create_position(db_session, department_id, position)
+    db_session.commit()

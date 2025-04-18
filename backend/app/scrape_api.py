@@ -1,5 +1,4 @@
 """Module to define the ScrapeAPI."""
-import time
 from typing import Optional
 from datetime import datetime, date
 
@@ -32,20 +31,24 @@ class ScrapeAPI:
 
     def scrape(self) -> list[Position]:
         """Run the scraping for the defined url."""
-        with SB(test=True, uc=True) as sb:
-            sb.open(self.url)
+        with SB(browser='chrome', test=True, uc=True, xvfb=True) as sb:
+            sb.uc_open_with_reconnect(self.url, 10)
             # Give the page time to load the JS if defined.
             if self.delay != 0:
-                time.sleep(self.delay)
-            body = sb.get_element('body', by=By.TAG_NAME)
+                sb.sleep(self.delay)
+            sb.uc_gui_click_captcha()
+            sb.sleep(5)
+            body: WebElement = sb.find_element('body', by=By.TAG_NAME)
             try:
                 departments: list = self.find_elems_by_class(
                     body, self.classes['department wrapper'])
+
                 position_date = datetime.now(
                     pytz.timezone('US/Eastern')).date()
+                positions: list[Position] = []
                 for department in departments:
-                    positions = self.handle_department(
-                        department, position_date)
+                    positions.extend(self.handle_department(
+                        department, position_date))
             except TimeoutException:
                 print('Failed')
         return positions
@@ -90,7 +93,7 @@ class ScrapeAPI:
                 location: str = self.strip_html_chr(position.find_element(
                     By.TAG_NAME, value='div').get_attribute('innerHTML'))
                 position_obj = Position(
-                    name=f'{name} {location}', location=location, url=url,
+                    name=f'{name} ({location})', location=location, url=url,
                     scrape_date=scrape_date, department=department)
             case _:
                 position_obj = None
