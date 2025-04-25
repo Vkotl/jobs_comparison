@@ -23,6 +23,7 @@ const HandleDateClick = (event: React.MouseEvent<HTMLSpanElement>) => {
 const App: React.FC = () => {
   const [array, setArray] = useState([]);
   const [dates, setDates] = React.useState(true);
+  const [scraping, setScraping] = useState(false);
   const fetchAPI = async () => {
     const response = await axios.get("http://localhost/api/changes");
     setArray(response.data.last_10);
@@ -33,8 +34,13 @@ const App: React.FC = () => {
   const HandleChangesButton = () => {
     setDates(false);
   };
-  const HandleScrapeButton = async () => {
+  const HandleScrapeButton = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    console.log(event.currentTarget.textContent);
+    setScraping(true);
     await axios.post("http://localhost/api/grab_data");
+    setScraping(false);
   };
   return (
     /* This wraps the HTML in a single element without giving a specific one,
@@ -42,15 +48,26 @@ const App: React.FC = () => {
     <>
       {dates ? (
         <Container className="change-dates">
+          <Row>
+            <h1 className="text-center mb-5">SoFi position openings changes</h1>
+          </Row>
+          {scraping ? (
+            <Row className="justify-content-center">
+              <span className="notify">Scraping in process.</span>
+            </Row>
+          ) : null}
           <Row className="justify-content-center">
             <Col xs={4}>
-              <Button className="mx-auto" onClick={HandleScrapeButton}>
+              <Button
+                className="mx-auto"
+                onClick={HandleScrapeButton}
+                disabled={scraping}
+              >
                 Scrape positions
               </Button>
             </Col>
           </Row>
-          <Row>
-            <h1 className="text-center mb-5">SoFi position openings changes</h1>
+          <Row className="align-self-end">
             <h3 className="text-center">Please choose the period </h3>
           </Row>
           <Row>

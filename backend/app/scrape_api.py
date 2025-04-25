@@ -8,50 +8,84 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 
+from .exceptions import FailedScrapeError
 from .proj_typing import Company, Department, Position
 
 class ScrapeAPI:
     """API to manage all the scraping for a given company."""
 
-    def __init__(self, company_data: dict, company_name: str, delay: int = 0):
+    def __init__(self, company_data: dict, company_name: str):
         """Initialize the Scrape API with company data."""
         self.company: Company = Company(name=company_name)
         self.url: str = company_data['url']
         self.classes: dict[str: str] = company_data['classes']
-        self.delay: int = delay
+        self.wait: Optional[dict] = company_data.get('wait', None)
 
 
     @staticmethod
     def find_elems_by_class(objects, class_name: str, single: bool = False):
         """Find the elements in objects based on the class name."""
-        params = {'by': By.CLASS_NAME, 'value': class_name}
+        params = {'value': class_name}
+        if class_name.startswith('.'):
+            params['by'] = By.CSS_SELECTOR
+        else:
+            params['by'] = By.CLASS_NAME
         if single:
             return objects.find_element(**params)
         return objects.find_elements(**params)
 
     def scrape(self) -> list[Position]:
         """Run the scraping for the defined url."""
-        with SB(browser='chrome', test=True, uc=True, xvfb=True) as sb:
-            sb.uc_open_with_reconnect(self.url, 10)
-            # Give the page time to load the JS if defined.
-            if self.delay != 0:
-                sb.sleep(self.delay)
-            sb.uc_gui_click_captcha()
-            sb.sleep(5)
+        positions: list[Position] = []
+        with SB(browser='chrome', uc=True, xvfb=True) as sb:
+            failed_connection: bool = self._connect_to_page(sb)
+            if failed_connection:
+                failed_connection = self._connect_to_page(sb)
+                if failed_connection:
+                    raise FailedScrapeError()
             body: WebElement = sb.find_element('body', by=By.TAG_NAME)
             try:
                 departments: list = self.find_elems_by_class(
                     body, self.classes['department wrapper'])
-
                 position_date = datetime.now(
                     pytz.timezone('US/Eastern')).date()
-                positions: list[Position] = []
                 for department in departments:
                     positions.extend(self.handle_department(
                         department, position_date))
             except TimeoutException:
                 print('Failed')
         return positions
+
+    def _connect_to_page(self, sb: SB):
+        """Handle connecting to the page and waiting for it to load."""
+        sb.uc_open_with_reconnect(self.url, 10)
+        attempts = 0
+        while not self._is_page_loaded(sb) and attempts < 2:
+            sb.uc_gui_click_captcha(retry=True)
+            sb.sleep(5)
+            attempts += 1
+        return attempts == 2 and not self._is_page_loaded(sb)
+
+
+    def _is_page_loaded(self, sb: SB):
+        """Check if the page is ready for scraping."""
+        if self.wait is not None:
+            if sb.is_element_present(self.wait['element'], by=By.CSS_SELECTOR):
+                if 'text' in self.wait:
+                    elem = sb.find_element(
+                        self.wait['element'], by=By.CSS_SELECTOR)
+                    match self.wait['text']:
+                        # If the text is the same as "not" then not loaded.
+                        case {'not': txt} if txt != elem.text:
+                            return True
+                        # If the text is the same as "equal" then loaded.
+                        case {'equal': elem.text}:
+                            return True
+                # If no 'text' in self.wait then element only needs to exist.
+                else:
+                    return True
+            return False
+        return True
 
     def handle_department(
             self, department: WebElement, pos_date: date

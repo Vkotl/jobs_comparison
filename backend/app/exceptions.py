@@ -24,7 +24,7 @@ class CompanyNotInJSONError(Exception):
 
 
 class FailedScrapeError(Exception):
-    """The company is not in the company JSON file."""
+    """The scraping failed."""
 
     def __init__(self, *args, **kwargs):
         """Exception constructor."""

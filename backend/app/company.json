@@ -6,6 +6,9 @@
       "department wrapper": "dept",
       "position title": "job-title",
       "department title": "dept-title"
+    },
+    "wait": {
+      "element": ".l-job-listings"
     }
   },
   "Galileo": {
@@ -14,6 +17,12 @@
       "position wrapper": "Opening__Wrapper-sc-1ghm7ee-0",
       "department wrapper": "DepartmentSection__Wrapper-sc-1gi5hyp-0",
       "department title": "DepartmentSection__Title-sc-1gi5hyp-2"
-    }
+    },
+    "wait": {
+        "element": ".sc-1-Hero__Text-sc-1llkkv7-5",
+        "text": {
+          "not": "Galileo has 0 open positions in -1 locations"
+        }
+      }
   }
 }

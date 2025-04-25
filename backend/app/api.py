@@ -1,6 +1,9 @@
 """Main file for running FastAPI."""
 
+import sys
+import asyncio
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from dateutil.relativedelta import relativedelta, FR
 
 import pytz
@@ -16,10 +19,8 @@ from .compare_positions import handle_changes_response
 app = FastAPI()
 router = APIRouter(prefix='/api')
 
-# origins = [
-#     'http://backend-service:8000',
-#     'backend-service:8000'
-# ]
+# SeleniumBase flag that tells it to do thread-locking.
+sys.argv.append('-n')
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,7 +52,6 @@ def recent_dates(db_session: Session = Depends(get_session)):
 def changes_two_dates(old_date: str, new_date: str,
                       db_session: Session = Depends(get_session)):
     """Display the changes between the old date and the new date."""
-    print(old_date, new_date)
     old_date = datetime.strptime(old_date, '%Y%m%d').date()
     new_date = datetime.strptime(new_date, '%Y%m%d').date()
     return handle_changes_response(db_session, old_date, new_date)
@@ -70,13 +70,17 @@ def changes_single_date(new_date: str,
 
 
 @router.post('/grab_data')
-def grab_data(db_session: Session = Depends(get_session)):
+async def grab_data(db_session: Session = Depends(get_session)):
     """Scrape positions data from the sites and save in the database."""
     try:
-        scrape_and_create_positions(db_session, 'SoFi')
-        scrape_and_create_positions(db_session, 'Galileo', delay=15)
-    except Exception as e:
-        print(e)
+        loop = asyncio.get_event_loop()
+        companies = ('SoFi', 'Galileo')
+        executor = ThreadPoolExecutor(max_workers=len(companies))
+        tasks = [loop.run_in_executor(
+            executor, scrape_and_create_positions, db_session, company)
+            for company in companies]
+        await asyncio.gather(*tasks)
+    except Exception:
         return {'error': 'Scraping failed.'}
     return {'success': 'Scraping completed.'}
 

@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 
+from filelock import FileLock
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
@@ -25,8 +26,7 @@ def get_last_10_dates(db_session: Session) -> list[str]:
     return res[::-1]
 
 
-def scrape_and_create_positions(db_session: Session, company_name: str,
-                                delay: int = 0):
+def scrape_and_create_positions(db_session: Session, company_name: str):
     """Scrape the company site and save the data in the database."""
     with Path(APP_FOLDER, COMPANY_JSON).open() as f:
         data = json.load(f).get(company_name, None)
@@ -34,18 +34,22 @@ def scrape_and_create_positions(db_session: Session, company_name: str,
         raise CompanyNotInJSONError()
     attempts = 0
     positions = []
-    while len(positions) == 0 and attempts <= 1:
-        scraper = ScrapeAPI(data, company_name, delay=delay)
-        positions = scraper.scrape()
-        print(positions)
-        attempts += 1
-    if len(positions) == 0:
-        raise FailedScrapeError()
+    try:
+        while len(positions) == 0 and attempts <= 1:
+            scraper = ScrapeAPI(data, company_name)
+            positions = scraper.scrape()
+            attempts += 1
+    except FailedScrapeError:
+        return
     company = scraper.company
-    create_company_if_not_exists(db_session, company)
-    delete_positions_date(db_session, positions[0].scrape_date, company)
-    for position in positions:
-        department_id = create_and_get_department(
-            db_session, positions.department)
-        create_position(db_session, department_id, position)
-    db_session.commit()
+    if len(positions) > 0:
+        lock = FileLock(Path(APP_FOLDER, 'db_write.lock'))
+        with lock:
+            create_company_if_not_exists(db_session, company)
+            delete_positions_date(
+                db_session, positions[0].scrape_date, company)
+            for position in positions:
+                department_id = create_and_get_department(
+                    db_session, position.department)
+                create_position(db_session, department_id, position)
+            db_session.commit()

@@ -51,6 +51,14 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+#root .btn:disabled {
+  background-color: darkgray;
+}
+
+.change-dates {
+  min-height: 75vh;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

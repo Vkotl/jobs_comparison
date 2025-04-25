@@ -21,6 +21,7 @@ spec:
         volumeMounts:
           - mountPath: /backend/sofijobs.db
             name: database-volume
+            subPath: sofijobs.db
             readOnly: false
       volumes:
         - name: database-volume
