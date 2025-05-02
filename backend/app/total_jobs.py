@@ -2,14 +2,13 @@
 import json
 from pathlib import Path
 
-from filelock import FileLock
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
-from .models import Position
 from .scrape_api import ScrapeAPI
+from .models import Position, Department
 from .constants import APP_FOLDER, COMPANY_JSON
-from .exceptions import CompanyNotInJSONError, FailedScrapeError
+from .exceptions import CompanyNotInJSONError
 from .helpers import (
     create_and_get_department, create_position, delete_positions_date,
     create_company_if_not_exists)
@@ -33,23 +32,18 @@ def scrape_and_create_positions(db_session: Session, company_name: str):
     if data is None:
         raise CompanyNotInJSONError()
     attempts = 0
-    positions = []
-    try:
-        while len(positions) == 0 and attempts <= 1:
-            scraper = ScrapeAPI(data, company_name)
-            positions = scraper.scrape()
-            attempts += 1
-    except FailedScrapeError:
-        return
+    positions: dict[Department, list[Position]] = {}
+    while len(positions) == 0 and attempts <= 1:
+        scraper = ScrapeAPI(data, company_name)
+        positions = scraper.scrape()
+        attempts += 1
     company = scraper.company
     if len(positions) > 0:
-        lock = FileLock(Path(APP_FOLDER, 'db_write.lock'))
-        with lock:
-            create_company_if_not_exists(db_session, company)
-            delete_positions_date(
-                db_session, positions[0].scrape_date, company)
-            for position in positions:
-                department_id = create_and_get_department(
-                    db_session, position.department)
+        create_company_if_not_exists(db_session, company)
+        delete_positions_date(
+            db_session, next(iter(positions.values()))[0].scrape_date, company)
+        for department in positions:
+            department_id = create_and_get_department(db_session, department)
+            for position in positions[department]:
                 create_position(db_session, department_id, position)
-            db_session.commit()
+        db_session.commit()

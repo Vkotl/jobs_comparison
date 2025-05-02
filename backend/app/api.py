@@ -2,6 +2,7 @@
 
 import sys
 import asyncio
+import traceback
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from dateutil.relativedelta import relativedelta, FR
@@ -12,14 +13,15 @@ from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import get_session
-from .total_jobs import get_last_10_dates, scrape_and_create_positions
+from .exceptions import FailedScrapeError
 from .decorators import date_verification
 from .compare_positions import handle_changes_response
+from .total_jobs import get_last_10_dates, scrape_and_create_positions
 
 app = FastAPI()
 router = APIRouter(prefix='/api')
 
-# SeleniumBase flag that tells it to do thread-locking.
+# SeleniumBase flag that tells it to use thread-locking.
 sys.argv.append('-n')
 
 app.add_middleware(
@@ -80,8 +82,12 @@ async def grab_data(db_session: Session = Depends(get_session)):
             executor, scrape_and_create_positions, db_session, company)
             for company in companies]
         await asyncio.gather(*tasks)
-    except Exception:
+    except FailedScrapeError as e:
+        traceback.print_exception(e)
         return {'error': 'Scraping failed.'}
+    except Exception as e:
+        traceback.print_exception(e)
+        return {'error': 'Server exception occurred.'}
     return {'success': 'Scraping completed.'}
 
 

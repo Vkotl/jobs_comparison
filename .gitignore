@@ -1,8 +1,6 @@
-*.txt
-!requirements.txt
 .venv
 .idea
-*.db
 __pycache__
 extra_scripts
 backend/downloaded_files
+backend/deploy/.env

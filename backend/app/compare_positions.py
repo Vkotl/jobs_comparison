@@ -122,8 +122,10 @@ def handle_changes_response(
     """Handle the response with positions changes."""
     if datetime.now(pytz.timezone('US/Eastern')).date() == old_date:
         old_date += relativedelta(weekday=FR(-2))
-    sofi = get_position_changes(db_session, old_date, new_date, 'SoFi')
-    galileo = get_position_changes(db_session, old_date, new_date, 'Galileo')
+    companies = ('SoFi', 'Galileo')
+    res = {}
+    for company in companies:
+        res[company.lower()] = get_position_changes(
+            db_session, old_date, new_date, company)
     return {'new_date': new_date.strftime('%Y-%m-%d'),
-            'previous_date': old_date.strftime('%Y-%m-%d'), 'sofi': sofi,
-            'galileo': galileo}
+            'previous_date': old_date.strftime('%Y-%m-%d'), **res}

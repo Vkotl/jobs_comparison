@@ -1,0 +1,12 @@
+selenium>=4.31.0,<4.32.0
+python-dateutil>=2.9.0.post0,<2.9.1.post0
+pytz>=2024.2, <2024.3
+fastapi>=0.115.6,<0.116.0
+fastapi-cli>=0.0.7,<0.0.8
+pydantic>=2.10.5,<2.11.0
+uvicorn>=0.34.0,<0.35.0
+sqlalchemy>=2.0.38,<2.1.0
+seleniumbase>=4.37.2,<4.38.0
+pyautogui>=0.9.54,<0.10.0
+mysql-connector-python>=9.3.0,<9.4.0
+mysqlclient>=2.2.7,<2.3.0

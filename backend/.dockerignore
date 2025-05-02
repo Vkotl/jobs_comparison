@@ -1,1 +1,5 @@
-*\sofijobs.db
+__pycache__
+requirements-dev.txt
+.dockerignore
+downloaded_files
+deploy

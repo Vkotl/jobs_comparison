@@ -12,22 +12,24 @@ spec:
       labels:
         app: backend
     spec:
+      initContainers:
+        - name: wait-for-mysql
       containers:
       - name: backend
         image: jobsback:latest
         imagePullPolicy: IfNotPresent
+        envFrom:
+          - secretRef:
+              name: backend-secret
         ports:
         - containerPort: 3000
         volumeMounts:
-          - mountPath: /backend/sofijobs.db
-            name: database-volume
-            subPath: sofijobs.db
-            readOnly: false
+          - name: database-volume
+            mountPath: "/backend/db"
       volumes:
         - name: database-volume
-          hostPath:
-            path: backend/sofijobs.db
-            type: File
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
 
 ---
 apiVersion: v1

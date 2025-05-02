@@ -2,7 +2,6 @@
 from typing import List
 from datetime import date
 
-from sqlalchemy.sql import func
 from sqlalchemy import String, Integer, ForeignKey, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
@@ -19,7 +18,7 @@ class Company(Base):
     __tablename__ = 'company'
 
     name: Mapped[str] = mapped_column(
-        String(10, collation='NOCASE'), primary_key=True)
+        String(10), primary_key=True)
 
     departments: Mapped[List['Department']] = relationship(
         back_populates='company', cascade='all, delete-orphan')
@@ -35,7 +34,7 @@ class Department(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(String(50))
     company_name: Mapped[str] = mapped_column(ForeignKey('company.name'))
 
     company: Mapped['Company'] = relationship(back_populates='departments')
@@ -54,8 +53,7 @@ class Position(Base):
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
-    scrape_date: Mapped[date] = mapped_column(
-        Date, nullable=False, server_default=func.current_date())
+    scrape_date: Mapped[date] = mapped_column(Date, nullable=False)
     url: Mapped[str] = mapped_column(String(300), nullable=True)
     department_id: Mapped[int] = mapped_column(ForeignKey('department.id'))
 

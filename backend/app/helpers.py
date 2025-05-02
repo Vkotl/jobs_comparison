@@ -1,13 +1,11 @@
 """Helpers module for the backend."""
 import pytz
-from pathlib import Path
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
 
 from sqlalchemy.orm import Session
 from sqlalchemy import delete, select, insert
 
-from .constants import DB_NAME
 from .proj_typing import Company, Position, Department
 from .models import (Position as db_Position, Department as db_Department,
                      Company as db_Company)
@@ -38,6 +36,7 @@ def create_and_get_department(
     if department_id is None:
         db_session.execute(insert(db_Department).values(db_data))
         department_id = db_session.execute(stmt).first()
+        db_session.commit()
     return department_id[0]
 
 
@@ -98,10 +97,7 @@ def delete_positions_date(db_session: Session, jobs_date: date,
                         db_Position.department_id == db_Department.id)
                   .where(db_Position.scrape_date == jobs_date,
                          db_Department.company_name == company.name))
-    stmt = delete(db_Position).where(db_Position.id.in_(inner_stmt))
-    db_session.execute(stmt)
-
-
-def build_db_path() -> Path:
-    """Build the database path."""
-    return Path(__file__).parents[1].absolute() / DB_NAME
+    positions = db_session.execute(inner_stmt).fetchall()
+    if len(positions) != 0:
+        stmt = delete(db_Position).where(db_Position.id.in_(tuple(zip(*positions))[0]))
+        db_session.execute(stmt)

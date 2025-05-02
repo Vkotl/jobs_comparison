@@ -17,6 +17,9 @@ class Department(BaseModel):
     name: str
     company: Company
 
+    def __hash__(self) -> int:
+        return self.name.__hash__()
+
 
 class Position(BaseModel):
     """Position type model."""

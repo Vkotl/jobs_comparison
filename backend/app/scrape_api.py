@@ -34,9 +34,9 @@ class ScrapeAPI:
             return objects.find_element(**params)
         return objects.find_elements(**params)
 
-    def scrape(self) -> list[Position]:
+    def scrape(self) -> dict[Department, list[Position]]:
         """Run the scraping for the defined url."""
-        positions: list[Position] = []
+        res: dict[Department, list[Position]] = {}
         with SB(browser='chrome', uc=True, xvfb=True) as sb:
             failed_connection: bool = self._connect_to_page(sb)
             if failed_connection:
@@ -50,11 +50,16 @@ class ScrapeAPI:
                 position_date = datetime.now(
                     pytz.timezone('US/Eastern')).date()
                 for department in departments:
-                    positions.extend(self.handle_department(
-                        department, position_date))
+                    positions: list[Position] = self.handle_department(
+                        department, position_date)
+                    dept_obj = positions[0].department
+                    if dept_obj in res:
+                        res[dept_obj].extend(positions)
+                    else:
+                        res[dept_obj] = positions
             except TimeoutException:
                 print('Failed')
-        return positions
+        return res
 
     def _connect_to_page(self, sb: SB):
         """Handle connecting to the page and waiting for it to load."""
