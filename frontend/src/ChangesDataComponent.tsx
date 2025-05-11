@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState } from "react";
 import axios from "axios";
-import { Col, Container, Row } from "react-bootstrap";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { ChangesJsonData } from "./interfaces/Company.ts";
 import { ChangesGroup } from "./ChangesGroup.tsx";
 import sofiLogo from "./assets/sofi_logo.svg";
@@ -29,10 +29,16 @@ export const ChangesDataComponent: React.FC = () => {
       setChanges(response.data);
     });
   }
+
+  const HandleBackButton = async () => {
+    window.location.href = "/";
+  };
+
   return (
     <>
       {changes ? (
         <Container id="changes-container">
+          <Button onClick={HandleBackButton}>Back</Button>
           <Row className="text-center">
             <Col xs={12} className="position-relative">
               <img src={sofiLogo} alt="SoFi's logo" />

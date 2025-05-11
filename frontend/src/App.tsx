@@ -21,12 +21,14 @@ const HandleDateClick = (event: React.MouseEvent<HTMLSpanElement>) => {
 };
 
 const App: React.FC = () => {
-  const [array, setArray] = useState([]);
-  const [dates, setDates] = React.useState(true);
-  const [scraping, setScraping] = useState(false);
+  const [array, setArray] = useState<Array<string>>([]),
+    [dates, setDates] = useState<boolean>(true),
+    [scraping, setScraping] = useState<boolean>(false),
+    [error, setError] = useState<string>("");
   const fetchAPI = async () => {
-    const response = await axios.get("http://localhost/api/changes");
-    setArray(response.data.last_10);
+    await axios.get("http://localhost/api/changes").then((response) => {
+      setArray(response.data.last_10);
+    });
   };
   useEffect(() => {
     fetchAPI();
@@ -34,13 +36,18 @@ const App: React.FC = () => {
   const HandleChangesButton = () => {
     setDates(false);
   };
-  const HandleScrapeButton = async (
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
-    console.log(event.currentTarget.textContent);
+  const HandleScrapeButton = async () => {
     setScraping(true);
-    await axios.post("http://localhost/api/grab_data");
-    setScraping(false);
+    setError("");
+    await axios.post("http://localhost/api/grab_data").then((response) => {
+      if ("error" in response.data) {
+        setError(response.data.error);
+      } else {
+        setError("");
+      }
+      setScraping(false);
+      fetchAPI();
+    });
   };
   return (
     /* This wraps the HTML in a single element without giving a specific one,
@@ -51,13 +58,19 @@ const App: React.FC = () => {
           <Row>
             <h1 className="text-center mb-5">SoFi position openings changes</h1>
           </Row>
-          {scraping ? (
+          {scraping || error ? (
             <Row className="justify-content-center">
-              <span className="notify">Scraping in process.</span>
+              <Col className="text-center">
+                {error ? (
+                  <span className="text-danger">{error}</span>
+                ) : (
+                  <span className="text-info">Scraping in process.</span>
+                )}
+              </Col>
             </Row>
           ) : null}
           <Row className="justify-content-center">
-            <Col xs={4}>
+            <Col xs={4} className="text-center">
               <Button
                 className="mx-auto"
                 onClick={HandleScrapeButton}
