@@ -1,5 +1,4 @@
 __pycache__
 requirements-dev.txt
 .dockerignore
-downloaded_files
 deploy

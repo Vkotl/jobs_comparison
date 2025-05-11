@@ -1,12 +1,13 @@
 """Comparison and data retrival from the database."""
-import pytz
-from datetime import date, datetime
+from datetime import date
 from dateutil.relativedelta import relativedelta, FR
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc, func
 
+from .constants import DATE_FORMAT_DB
 from .models import Department, Position
+from .helpers import get_today_date, get_previous_friday
 
 
 def get_data_db(
@@ -50,7 +51,8 @@ def is_brand_new(
     stmt = select(func.count()).select_from(Position).join(
         Department, Position.department_id == Department.id).where(
         Department.name == department, Position.name == position,
-        Department.company_name == company)
+        Department.company_name == company,
+        Position.scrape_date <= get_previous_friday())
     count = db_session.execute(stmt).fetchone()[0]
     return count == 1
 
@@ -120,12 +122,12 @@ def get_position_changes(
 def handle_changes_response(
     db_session: Session, old_date: date, new_date: date) -> dict:
     """Handle the response with positions changes."""
-    if datetime.now(pytz.timezone('US/Eastern')).date() == old_date:
+    if get_today_date() == old_date:
         old_date += relativedelta(weekday=FR(-2))
     companies = ('SoFi', 'Galileo')
     res = {}
     for company in companies:
         res[company.lower()] = get_position_changes(
             db_session, old_date, new_date, company)
-    return {'new_date': new_date.strftime('%Y-%m-%d'),
-            'previous_date': old_date.strftime('%Y-%m-%d'), **res}
+    return {'new_date': new_date.strftime(DATE_FORMAT_DB),
+            'previous_date': old_date.strftime(DATE_FORMAT_DB), **res}

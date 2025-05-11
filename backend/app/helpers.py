@@ -1,4 +1,6 @@
 """Helpers module for the backend."""
+from typing import Optional
+
 import pytz
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta, FR
@@ -101,3 +103,18 @@ def delete_positions_date(db_session: Session, jobs_date: date,
     if len(positions) != 0:
         stmt = delete(db_Position).where(db_Position.id.in_(tuple(zip(*positions))[0]))
         db_session.execute(stmt)
+
+
+def get_today_date() -> date:
+    """Get today's date in the defined time zone."""
+    return datetime.now(pytz.timezone('US/Eastern')).date()
+
+
+def get_previous_friday(comparison_date: Optional[date] =  None) -> date:
+    """Get the date of the previous Friday."""
+    if comparison_date is None:
+        comparison_date = get_today_date()
+    friday = comparison_date + relativedelta(weekday=FR(-1))
+    if friday == comparison_date:
+        friday += relativedelta(weekday=FR(-2))
+    return friday

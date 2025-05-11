@@ -12,8 +12,6 @@ spec:
       labels:
         app: backend
     spec:
-      initContainers:
-        - name: wait-for-mysql
       containers:
       - name: backend
         image: jobsback:latest
@@ -30,7 +28,6 @@ spec:
         - name: database-volume
           persistentVolumeClaim:
             claimName: mysql-pv-claim
-
 ---
 apiVersion: v1
 kind: Service
@@ -42,4 +39,3 @@ spec:
   ports:
   - name: http
     port: 3000
-    targetPort: 3000

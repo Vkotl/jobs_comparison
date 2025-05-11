@@ -16,16 +16,14 @@ spec:
       containers:
       - image: mysql:9.3
         name: mysql
-        env:
-          # Use secret in real usage
-        - name: MYSQL_ROOT_PASSWORD
-          value: password
-        ports:
-        - containerPort: 3306
-          name: mysql
+        envFrom:
+          - secretRef:
+              name: backend-secret
         volumeMounts:
         - name: mysql-persistent-storage
           mountPath: /var/lib/mysql
+        args:
+          - "--port=$(MYSQL_PORT)"
       volumes:
       - name: mysql-persistent-storage
         persistentVolumeClaim:

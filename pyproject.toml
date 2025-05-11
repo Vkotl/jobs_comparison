@@ -1,6 +1,6 @@
 [project]
-name = "sofi_jobs_comparison"
-version = "0.1.0"
+name = "jobs_comparison"
+version = "1.0.0"
 description = "Scrapes positions from SoFi and Galileo sites and compares to the past."
 readme = "README.md"
 requires-python = ">=3.12"

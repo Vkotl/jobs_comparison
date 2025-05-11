@@ -5,17 +5,17 @@ import asyncio
 import traceback
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-from dateutil.relativedelta import relativedelta, FR
 
-import pytz
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import get_session
+from .constants import DATE_FORMAT_URL
 from .exceptions import FailedScrapeError
 from .decorators import date_verification
 from .compare_positions import handle_changes_response
+from .helpers import get_previous_friday, get_today_date
 from .total_jobs import get_last_10_dates, scrape_and_create_positions
 
 app = FastAPI()
@@ -37,9 +37,8 @@ app.add_middleware(
 @date_verification
 def changes_week(db_session: Session = Depends(get_session)):
     """Handle root URL where it returns last week changes."""
-    tz_title = 'US/Eastern'
-    chosen_date = datetime.now(pytz.timezone(tz_title)).date()
-    old_date = chosen_date + relativedelta(weekday=FR(-1))
+    chosen_date = get_today_date()
+    old_date = get_previous_friday(chosen_date)
     return handle_changes_response(db_session, old_date, chosen_date)
 
 
@@ -54,8 +53,8 @@ def recent_dates(db_session: Session = Depends(get_session)):
 def changes_two_dates(old_date: str, new_date: str,
                       db_session: Session = Depends(get_session)):
     """Display the changes between the old date and the new date."""
-    old_date = datetime.strptime(old_date, '%Y%m%d').date()
-    new_date = datetime.strptime(new_date, '%Y%m%d').date()
+    old_date = datetime.strptime(old_date, DATE_FORMAT_URL).date()
+    new_date = datetime.strptime(new_date, DATE_FORMAT_URL).date()
     return handle_changes_response(db_session, old_date, new_date)
 
 
@@ -64,10 +63,8 @@ def changes_two_dates(old_date: str, new_date: str,
 def changes_single_date(new_date: str,
                         db_session: Session = Depends(get_session)):
     """Display the changes the new date and previous Friday."""
-    new_date = datetime.strptime(new_date, '%Y%m%d')
-    old_date = new_date + relativedelta(weekday=FR(-1))
-    if new_date == old_date:
-        old_date += relativedelta(weekday=FR(-2))
+    new_date = datetime.strptime(new_date, DATE_FORMAT_URL).date()
+    old_date = get_previous_friday(new_date)
     return handle_changes_response(db_session, old_date, new_date)
 
 
