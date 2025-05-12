@@ -54,7 +54,7 @@ def is_brand_new(
         Department.company_name == company,
         Position.scrape_date <= get_previous_friday())
     count = db_session.execute(stmt).fetchone()[0]
-    return count == 1
+    return count == 0
 
 
 def crosscheck_jobs(new_jobs: dict, old_jobs: dict) -> dict:

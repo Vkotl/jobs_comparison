@@ -1,28 +1,30 @@
 """Constants for the project."""
-DEV_FLAG = False
+from typing import Final
+
+DEV_FLAG: Final[bool] = False
 ###############################################################################
 #                                 File names                                  #
 ###############################################################################
-COMPANY_JSON = 'company.json'
+COMPANY_JSON: Final[str] = 'company.json'
 
 ###############################################################################
 #                                Folder names                                 #
 ###############################################################################
-APP_FOLDER = 'app'
-BACKEND_FOLDER = 'backend'
+APP_FOLDER: Final[str] = 'app'
+BACKEND_FOLDER: Final[str] = 'backend'
 
 ###############################################################################
 #                               Container names                               #
 ###############################################################################
-MYSQL_DEPLOYMENT = 'mysql'
+MYSQL_DEPLOYMENT: Final[str] = 'mysql'
 
 ###############################################################################
 #                                    Errors                                   #
 ###############################################################################
-BAD_DATE_FORMAT_ERROR = 'Bad structure for date.'
+BAD_DATE_FORMAT_ERROR: Final[str] = 'Bad structure for date.'
 
 ###############################################################################
 #                                     Other                                   #
 ###############################################################################
-DATE_FORMAT_DB = '%Y-%m-%d'
-DATE_FORMAT_URL = '%Y%m%d'
+DATE_FORMAT_DB: Final[str] = '%Y-%m-%d'
+DATE_FORMAT_URL: Final[str] = '%Y%m%d'
